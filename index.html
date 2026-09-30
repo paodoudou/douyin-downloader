@@ -1,0 +1,2878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light">
+<title>抖音下载 · 无水印解析</title>
+<style>
+  :root{
+    --bg:#fdf6f8;
+    --bg-2:#fffafc;
+    --card:#ffffff;
+    --card-2:#fff6f9;
+    --line:#f2dde4;
+    --line-2:#e8c9d4;
+    --text:#3a2730;
+    --text-2:#7d6670;
+    --text-3:#a8929c;
+    --accent:#ee6b93;
+    --accent-2:#cb4d75;
+    --ok:#3fae74;
+    --warn:#d19a35;
+    --err:#de5560;
+    --radius:14px;
+    --shadow:0 1px 3px rgba(214,158,180,.12);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  [hidden]{display:none !important}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  a{color:var(--accent-2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font-family:inherit;font-size:14px}
+  code{background:#fdf1f5;border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:12px}
+  pre{background:#fdf6f8;border:1px solid var(--line);border-radius:10px;padding:10px;overflow:auto;font-size:11.5px;line-height:1.6;margin:6px 0}
+  ::selection{background:rgba(232,85,126,.18)}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 14px;background:rgba(255,252,253,.94);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:9px;min-width:0}
+  .logo{
+    width:32px;height:32px;flex:none;border-radius:10px;display:grid;place-items:center;
+    font-size:15px;font-weight:700;color:#fff;background:var(--accent);
+  }
+  .brand-text{min-width:0}
+  .brand-text h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.2px;white-space:nowrap}
+  .brand-text p{margin:1px 0 0;font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-actions{display:flex;align-items:center;gap:6px;flex:none}
+  .chip{
+    border:1px solid var(--line);background:#fff;color:var(--text-2);border-radius:999px;
+    padding:5px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .chip:hover{border-color:var(--line-2)}
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--text-3)}
+  .chip.ok .dot{background:var(--accent)}
+  .chip.warn .dot{background:var(--warn)}
+  .chip.err .dot{background:var(--err)}
+  .icon-btn{
+    width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;
+    color:var(--text-2);font-size:15px;cursor:pointer;display:grid;place-items:center;
+  }
+  .icon-btn:hover{color:var(--accent-2);border-color:var(--line-2)}
+
+  /* ---------- 布局 ---------- */
+  .container{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:12px 12px 96px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;margin-bottom:10px;box-shadow:var(--shadow);
+  }
+  .card.flat{background:var(--card)}
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .card-head h2,.card-head h3{margin:0;font-size:14px;font-weight:600}
+  .hint,.sub{color:var(--text-3);font-size:12px}
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .spacer{height:10px}
+  .divider{height:1px;background:var(--line);margin:10px 0}
+  .grow{flex:1;min-width:0}
+  .ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kv{display:flex;gap:8px;font-size:12px;color:var(--text-2);flex-wrap:wrap}
+
+  /* ---------- 控件 ---------- */
+  .input,textarea.input{
+    width:100%;background:var(--bg-2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:11px 12px;font-size:14px;outline:none;transition:border-color .15s,background .15s;
+  }
+  .input:focus,textarea.input:focus{border-color:var(--accent);background:#fff}
+  textarea.input{resize:vertical;min-height:80px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5}
+  .input::placeholder,textarea.input::placeholder{color:var(--text-3)}
+  select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--text-2) 50%),linear-gradient(135deg,var(--text-2) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  .input-row{display:flex;gap:8px;align-items:stretch}
+  .input-row .input{flex:1;min-width:0}
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--text);
+    border-radius:10px;padding:10px 14px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
+    transition:background .15s,border-color .15s,opacity .1s;
+  }
+  .btn:hover{border-color:var(--line-2);background:#fffafc}
+  .btn:active{opacity:.85}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn.tiny{padding:5px 9px;font-size:12px;border-radius:8px}
+  .btn.mini{padding:3px 8px;font-size:11.5px;border-radius:7px}
+  .btn.big{width:100%;padding:13px;font-size:15px;font-weight:600}
+  .btn.primary{border-color:transparent;background:var(--accent);color:#fff}
+  .btn.primary:hover{background:#dd4871;border-color:transparent}
+  .btn.ghost{border-color:transparent;background:transparent;color:var(--text-2)}
+  .btn.ghost:hover{color:var(--accent-2);background:transparent;border-color:transparent}
+  .btn.ok{border-color:rgba(238,107,147,.45);background:rgba(238,107,147,.14);color:#bd3c66}
+  .btn.ok:hover{background:rgba(238,107,147,.2)}
+  .btn.danger{border-color:transparent;background:transparent;color:#d9535f}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--text-2);margin-bottom:5px}
+  .field .desc{font-size:11.5px;color:var(--text-3);margin-top:5px;line-height:1.6}
+  label.switch,.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--text-2);flex:none;white-space:nowrap}
+  .switch input{display:none}
+  .switch .track{width:38px;height:22px;border-radius:999px;background:#f0dfe5;position:relative;transition:background .18s;flex:none}
+  .switch .track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .18s;box-shadow:0 1px 2px rgba(180,120,145,.35)}
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked + .track::after{transform:translateX(16px)}
+
+  /* ---------- 状态 / 标签 ---------- */
+  .identity{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2)}
+  .identity .ic{font-size:12px}
+  .identity.user{color:var(--accent-2)}
+  .tag{
+    display:inline-flex;align-items:center;gap:4px;
+    border:1px solid var(--line);border-radius:999px;background:#fff;
+    padding:2px 8px;font-size:11.5px;color:var(--text-2);
+  }
+  .tag.accent{border-color:rgba(232,85,126,.35);color:var(--accent-2);background:rgba(232,85,126,.08)}
+  .tag.ok{border-color:rgba(232,85,126,.28);color:var(--accent-2);background:rgba(232,85,126,.06)}
+  .badge{background:var(--accent);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;margin-left:6px}
+  .progress{height:5px;background:#f6e6ec;border-radius:999px;overflow:hidden}
+  .progress > i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+  .progress.indet > i{width:35%;animation:slide 1.1s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-40%}100%{margin-left:105%}}
+  .spin{
+    width:13px;height:13px;border-radius:50%;flex:none;
+    border:2px solid rgba(255,255,255,.45);border-top-color:#fff;
+    animation:spin .7s linear infinite;display:inline-block;
+  }
+  .btn.ghost .spin,.btn:not(.primary):not(.ok) .spin{border-color:rgba(232,85,126,.35);border-top-color:var(--accent)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- 媒体 ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .media{position:relative;border-radius:12px;overflow:hidden;background:#f7e9ee;aspect-ratio:3/4}
+  .media img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+  .media .idx{position:absolute;left:8px;top:8px;background:rgba(58,39,48,.55);border-radius:7px;padding:1px 6px;font-size:11px;color:#fff}
+  .media .ops{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;padding:8px;background:linear-gradient(180deg,transparent,rgba(58,39,48,.72))}
+  .media .ops .btn{flex:1;padding:5px 4px;font-size:11.5px;background:rgba(255,255,255,.9);border-color:transparent;color:var(--text)}
+  .vitem{display:flex;gap:10px;align-items:flex-start}
+  .vitem .num{
+    width:24px;height:24px;flex:none;border-radius:7px;background:var(--bg-2);border:1px solid var(--line);
+    display:grid;place-items:center;font-size:11.5px;color:var(--text-3)
+  }
+  .vitem .meta{font-size:11.5px;color:var(--text-3);margin-top:2px}
+  .desc{font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.62}
+  .desc.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--text-3);word-break:break-all}
+
+  /* ---------- 评论 ---------- */
+  .comment{padding:9px 0;border-top:1px solid var(--line)}
+  .comment:first-of-type{border-top:none}
+  .cname{font-size:13px;font-weight:600;color:var(--accent-2)}
+  .ctext{font-size:13.5px;margin:3px 0 0;white-space:pre-wrap;word-break:break-word}
+  .cmeta{font-size:11px;color:var(--text-3)}
+  .cimgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .cimg{position:relative;width:76px;height:76px;border-radius:9px;overflow:hidden;background:#f7e9ee}
+  .cimg img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+  .cimg .btn{position:absolute;left:0;right:0;bottom:0;border-radius:0;padding:2px;font-size:11px;background:rgba(58,39,48,.6);border:none;color:#fff}
+  .emoji{height:24px;border-radius:6px;display:block}
+  .reply{margin:6px 0 0 12px;padding-left:10px;border-left:2px solid var(--line)}
+  .pager{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;margin:8px 0}
+
+  /* ---------- 提示 ---------- */
+  .empty{text-align:center;padding:40px 16px;color:var(--text-3)}
+  .empty .big{font-size:32px;opacity:.3;display:block;margin-bottom:8px}
+  .notice{
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;
+    color:var(--text-2);background:var(--bg-2);line-height:1.65;
+  }
+  .notice.warn{border-left:3px solid var(--accent);color:var(--text-2)}
+  .notice.err{border-left:3px solid var(--err);color:#a8424a}
+  .notice.ok{border-left:3px solid var(--ok);color:#357a56}
+
+  /* ---------- 悬浮 / 弹层 ---------- */
+  .fab{
+    position:fixed;right:14px;bottom:20px;z-index:40;
+    width:40px;height:40px;border-radius:50%;border:none;
+    background:var(--accent);color:#fff;font-size:17px;cursor:pointer;
+    box-shadow:0 3px 10px rgba(214,110,145,.35);
+  }
+  .toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(92vw,440px)}
+  .toast{
+    background:#fff;border:1px solid var(--line);border-left:3px solid var(--accent);
+    color:var(--text);padding:8px 13px;border-radius:10px;font-size:13px;max-width:100%;
+    animation:pop .18s ease-out;word-break:break-word;box-shadow:var(--shadow);
+  }
+  .toast.err{border-left-color:var(--err)}
+  .toast.ok{border-left-color:var(--ok)}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .modal{position:fixed;inset:0;z-index:70;background:rgba(74,48,60,.34);display:flex;align-items:flex-end;justify-content:center}
+  .modal-card{
+    width:min(680px,100%);max-height:88vh;overflow:auto;
+    background:var(--bg);border:1px solid var(--line);border-bottom:none;
+    border-radius:16px 16px 0 0;padding:16px;
+  }
+  @media(min-width:700px){.modal{align-items:center}.modal-card{border-radius:16px;border-bottom:1px solid var(--line)}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+  .modal-head h3{margin:0;font-size:16px;font-weight:600}
+  .viewer{position:fixed;inset:0;z-index:90;background:rgba(30,20,25,.94);display:grid;place-items:center;padding:20px;cursor:zoom-out}
+  .viewer img{max-width:100%;max-height:88vh;border-radius:10px}
+  .viewer .name{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:#ddd;font-size:12px}
+  table.rules{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}
+  table.rules th,table.rules td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+  table.rules th{background:var(--bg-2);color:var(--text-2);font-weight:600}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">抖</div>
+    <div class="brand-text">
+      <h1>抖音下载</h1>
+      <p>无水印视频 · 图集 · 实况 · 合集 · 评论</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="chip" id="channelChip" data-act="settings"><span class="dot"></span><span id="channelChipText">通道检测中…</span></button>
+    <button class="icon-btn" data-act="settings" title="设置">⚙</button>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card">
+    <div class="input-row">
+      <input id="shareUrl" class="input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="粘贴抖音分享链接或整段分享文案">
+      <button class="btn ghost" data-act="paste">粘贴</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn primary big" data-act="parse" id="parseBtn">解析链接</button>
+    <div class="row-between" style="margin-top:10px">
+      <div class="identity" id="identityBox"><span id="identityText">当前身份：检测中…</span><span class="hint" id="cookieMeta"></span></div>
+      <div class="row" style="gap:2px">
+        <button class="btn mini ghost" data-act="cookie-edit">Cookie</button>
+        <button class="btn mini ghost" data-act="cookie-validate">验证</button>
+        <button class="btn mini ghost" data-act="cookie-help">帮助</button>
+      </div>
+    </div>
+    <div id="cookiePanel" hidden></div>
+  </section>
+
+  <div id="resultArea"></div>
+</main>
+
+<button class="fab" id="toTop" data-act="totop" hidden title="回到顶部">↑</button>
+<div class="toasts" id="toasts"></div>
+<div class="modal" id="modal" hidden><div class="modal-card" id="modalCard"></div></div>
+<div class="viewer" id="viewer" hidden><img id="viewerImg" alt=""><div class="name" id="viewerName"></div></div>
+
+<script>
+'use strict';
+/* =========================================================================
+ * 抖音下载 · 单文件网页版
+ * 由 Android 应用 android-diary 的「抖音下载」模块移植（功能保持一致）：
+ *   链接解析 / 无水印视频 / 图集 / 实况图集 / 合集混剪 / 独立视频列表 /
+ *   背景音乐与视频音轨 / 评论区(含回复、图片、表情、搜索、排序、分页) /
+ *   Cookie 登录态与身份识别 / 一键下载全部 · 一键保存全部
+ * 依赖：无（纯静态单文件，A-Bogus 签名在浏览器内计算）
+ * ========================================================================= */
+
+/* ============================ 1. 基础工具 ============================ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const nowMs = () => Date.now();
+const randInt = (n) => Math.floor(Math.random() * n);
+const fmtBytes = (n) => {
+  if (n == null || isNaN(n)) return '?';
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+  return (n / 1073741824).toFixed(2) + ' GB';
+};
+const fmtDuration = (ms) => {
+  const s = Math.max(0, Math.floor((ms || 0) / 1000));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+};
+const fmtTime = (sec) => {
+  if (!sec) return '';
+  const d = new Date(sec * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+/** 文件名安全化（对应 Android 端 audioSaveName 的清洗规则） */
+const safeName = (raw, fallback) => {
+  let s = String(raw || '').replace(/[\\/:*?"<>|\r\n\t]/g, '_').trim().replace(/[.\s]+$/, '');
+  s = s.replace(/[#?&%]/g, '_');
+  if (!s) s = String(fallback || nowMs());
+  return s.slice(0, 60);
+};
+const extFromUrl = (url, def) => {
+  const u = String(url || '').toLowerCase();
+  if (u.includes('.webp')) return 'webp';
+  if (u.includes('.png')) return 'png';
+  if (u.includes('.gif')) return 'gif';
+  if (u.includes('.jpeg') || u.includes('.jpg')) return 'jpg';
+  if (u.includes('.m4a')) return 'm4a';
+  if (u.includes('.mp3')) return 'mp3';
+  return def || 'webp';
+};
+
+function toast(msg, type) {
+  const box = $('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  box.appendChild(t);
+  setTimeout(() => {
+    t.style.transition = 'opacity .25s';
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 260);
+  }, 2600);
+}
+
+async function copyText(text, tip) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(tip || '已复制', 'ok');
+  } catch (_) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast(tip || '已复制', 'ok'); }
+    catch (e) { toast('复制失败，请手动选择文本', 'err'); }
+    ta.remove();
+  }
+}
+
+/** 触发浏览器下载（等价于 Android 端保存到相册） */
+function saveBlobAs(name, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
+}
+
+/* ====================== 2. 调试日志（设置页可见） ====================== */
+const logs = [];
+function logLine(msg) {
+  const line = `[${new Date().toTimeString().slice(0, 8)}] ${msg}`;
+  logs.push(line);
+  if (logs.length > 120) logs.shift();
+  const el = $('logBox');
+  if (el) { el.textContent = logs.join('\n'); el.scrollTop = el.scrollHeight; }
+}
+
+/* ============================== 3. SM3 ============================== */
+const SM3 = (() => {
+  const IV = [0x7380166f, 0x4914b2b9, 0x172442d7, 0xda8a0600,
+              0xa96f30bc, 0x163138aa, 0xe38dee4d, 0xb0fb0e4e];
+  const rotl = (x, n) => { n &= 31; return ((x << n) | (x >>> (32 - n))) >>> 0; };
+  const P0 = (x) => (x ^ rotl(x, 9) ^ rotl(x, 17)) >>> 0;
+  const P1 = (x) => (x ^ rotl(x, 15) ^ rotl(x, 23)) >>> 0;
+  const T = (j) => (j <= 15 ? 0x79cc4519 : 0x7a879d8a);
+  const FF = (j, x, y, z) => (j <= 15 ? (x ^ y ^ z) >>> 0 : ((x & y) | (x & z) | (y & z)) >>> 0);
+  const GG = (j, x, y, z) => (j <= 15 ? (x ^ y ^ z) >>> 0 : ((x & y) | (~x & z)) >>> 0);
+
+  function hash(bytes) {
+    const len = bytes.length;
+    const bitLen = len * 8;
+    const withOne = len + 1;
+    const padLen = (56 - (withOne % 64) + 64) % 64;
+    const total = withOne + padLen + 8;
+    const buf = new Uint8Array(total);
+    buf.set(bytes, 0);
+    buf[len] = 0x80;
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(total - 8, Math.floor(bitLen / 4294967296), false);
+    dv.setUint32(total - 4, bitLen >>> 0, false);
+
+    let V = IV.slice();
+    const W = new Uint32Array(68), W1 = new Uint32Array(64);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) W[i] = dv.getUint32(off + i * 4, false);
+      for (let i = 16; i < 68; i++) {
+        W[i] = (P1((W[i - 16] ^ W[i - 9] ^ rotl(W[i - 3], 15)) >>> 0) ^ rotl(W[i - 13], 7) ^ W[i - 6]) >>> 0;
+      }
+      for (let i = 0; i < 64; i++) W1[i] = (W[i] ^ W[i + 4]) >>> 0;
+      let A = V[0], B = V[1], C = V[2], D = V[3], E = V[4], F = V[5], G = V[6], H = V[7];
+      for (let j = 0; j < 64; j++) {
+        const SS1 = rotl(((rotl(A, 12) + E + rotl(T(j), j % 32)) >>> 0), 7);
+        const SS2 = (SS1 ^ rotl(A, 12)) >>> 0;
+        const TT1 = ((FF(j, A, B, C) + D + SS2 + W1[j]) >>> 0);
+        const TT2 = ((GG(j, E, F, G) + H + SS1 + W[j]) >>> 0);
+        D = C; C = rotl(B, 9); B = A; A = TT1;
+        H = G; G = rotl(F, 19); F = E; E = P0(TT2);
+      }
+      V = [(V[0] ^ A) >>> 0, (V[1] ^ B) >>> 0, (V[2] ^ C) >>> 0, (V[3] ^ D) >>> 0,
+           (V[4] ^ E) >>> 0, (V[5] ^ F) >>> 0, (V[6] ^ G) >>> 0, (V[7] ^ H) >>> 0];
+    }
+    const out = new Uint8Array(32);
+    const odv = new DataView(out.buffer);
+    for (let i = 0; i < 8; i++) odv.setUint32(i * 4, V[i], false);
+    return out;
+  }
+  return { hash };
+})();
+
+const TE = new TextEncoder();
+const toHex = (bytes) => Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+const utf8 = (s) => TE.encode(s);
+
+/* ============================= 4. A-Bogus =============================
+ * 移植自 ABogus.kt / TikTokDownloader aBogus.py
+ * ==================================================================== */
+const ABogus = (() => {
+  const UA_KEY = new Uint8Array([0x00, 0x01, 0x0e]);
+  const END_STRING = 'cus';
+  const BROWSER = '1536|742|1536|864|0|0|0|0|1536|864|1536|864|1536|742|24|24|Win32';
+  const S1 = 'Dkdpgh4ZKsQB80/Mfvw36XI1R25+WUAlEi7NLboqYTOPuzmFjJnryx9HVGcaStCe=';
+  const S2 = 'Dkdpgh4ZKsQB80/Mfvw36XI1R25-WUAlEi7NLboqYTOPuzmFjJnryx9HVGcaStCe=';
+  const S4 = 'Dkdpgh2ZmsQB80/MfvV36XI1R45-WUAlEixNLwoqYTOPuzKFjJnry79HbGcaStCe';
+
+  /** RC4（对字节数组做流加密） */
+  function rc4(text, key) {
+    const s = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) s[i] = i;
+    let j = 0;
+    for (let i = 0; i < 256; i++) {
+      j = (j + s[i] + key[i % key.length]) % 256;
+      const t = s[i]; s[i] = s[j]; s[j] = t;
+    }
+    const out = new Uint8Array(text.length);
+    let i = 0; j = 0;
+    for (let k = 0; k < text.length; k++) {
+      i = (i + 1) % 256;
+      j = (j + s[i]) % 256;
+      const t = s[i]; s[i] = s[j]; s[j] = t;
+      out[k] = text[k] ^ s[(s[i] + s[j]) % 256];
+    }
+    return out;
+  }
+
+  /** 自定义字母表编码（等价于 encodeCustom） */
+  function encodeCustom(bytes, table) {
+    const masks = [0xFC0000, 0x03F000, 0x0FC0, 0x3F];
+    const shifts = [18, 12, 6, 0];
+    let out = '';
+    for (let i = 0; i < bytes.length; i += 3) {
+      const a = bytes[i];
+      const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+      const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+      const n = ((a << 16) | (b << 8) | c) >>> 0;
+      for (let k = 0; k < 4; k++) {
+        if (k === 2 && i + 1 >= bytes.length) break;
+        if (k === 3 && i + 2 >= bytes.length) break;
+        out += table[((n & masks[k]) >>> shifts[k])];
+      }
+    }
+    const pad = (4 - (out.length % 4)) % 4;
+    return out + '='.repeat(pad);
+  }
+
+  /** SM3(str) → 32 字节 */
+  const sm3 = (bytes) => SM3.hash(bytes);
+  /** SM3(hex(SM3(str))) → 32 字节（对应 sm3HashDouble） */
+  function sm3HashDouble(str) {
+    return sm3(utf8(toHex(sm3(utf8(str)))));
+  }
+
+  function randList(a, b = 170, c = 85, d = 0, e = 0, f = 0, g = 0) {
+    const r = a == null ? Math.random() * 10000 : a;
+    const ri = Math.trunc(r);
+    const v0 = ri, v1 = ri & 255, v2 = ri >> 8;
+    return [(v1 & b) | d, (v1 & c) | e, (v2 & b) | f, (v2 & c) | g];
+  }
+
+  function genString1() {
+    const p1 = randList(null, 170, 85, 1, 2, 5, 45 & 170);
+    const p2 = randList(null, 170, 85, 1, 0, 0, 0);
+    const p3 = randList(null, 170, 85, 1, 0, 5, 0);
+    return Uint8Array.from([...p1, ...p2, ...p3].map((n) => n & 255));
+  }
+
+  function list4(a, b, c, d, e, f, g, h, i, j, k, m, n, o, p, q, r) {
+    return [44, a, 0, 0, 0, 0, 24, b, n, 0, c, d, 0, 0, 0, 1, 0, 239,
+            e, o, f, g, 0, 0, 0, 0, h, 0, 0, 14, i, j, 0, k, m, 3, p, 1, q, 1, r, 0, 0, 0];
+  }
+
+  /** 生成 a_bogus 原始值（未做 URL 编码） */
+  function sign(urlParams, userAgent) {
+    const browserCodes = Array.from(BROWSER).map((c) => c.charCodeAt(0));
+
+    // ua_code = SM3(customEncode(RC4(ua, UA_KEY)))
+    const uaEnc = rc4(utf8(userAgent), UA_KEY);
+    const uaCode = sm3(utf8(encodeCustom(uaEnc, S2)));
+
+    const paramsCode = sm3HashDouble(urlParams + END_STRING);
+    const methodCode = sm3HashDouble('GET' + END_STRING);
+
+    const st = nowMs();
+    const et = st + (4 + randInt(5));
+    const s1 = genString1();
+
+    const a = list4(
+      (et >>> 24) & 255, paramsCode[21], uaCode[23],
+      (et >>> 16) & 255, paramsCode[22], uaCode[24],
+      (et >>> 8) & 255, et & 255,
+      (st >>> 24) & 255, (st >>> 16) & 255,
+      (st >>> 8) & 255, st & 255,
+      methodCode[21], methodCode[22],
+      0, 0, BROWSER.length
+    );
+    let xorSum = a[0];
+    for (let i = 1; i < a.length; i++) xorSum ^= a[i];
+
+    const all = [...a, ...browserCodes, xorSum].map((n) => n & 255);
+    const s2 = rc4(Uint8Array.from(all), utf8('y'));
+    const joined = new Uint8Array(s1.length + s2.length);
+    joined.set(s1, 0); joined.set(s2, s1.length);
+    return encodeCustom(joined, S4);
+  }
+
+  /** 把参数拼成带 a_bogus 的完整 URL */
+  function signUrl(baseUrl, paramsObj, userAgent) {
+    const query = Object.keys(paramsObj).map((k) => `${k}=${paramsObj[k]}`).join('&');
+    const ab = sign(query, userAgent);
+    const sep = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${sep}${query}&a_bogus=${encodeURIComponent(ab)}`;
+  }
+
+  return { sign, signUrl };
+})();
+
+/* ====================== 5. 配置 / 通道（代理层） ======================
+ * 浏览器不能跨域直连抖音接口，也不能手动设置 Cookie 头，
+ * 因此这里提供多通道自动降级：
+ *   edge   本站反代前缀（在腾讯云 EdgeOne 配一条路径回源规则即可，同源、可透传 Cookie）
+ *   direct 直连（浏览器直连抖音接口，部分网络/接口可用）
+ *   custom 自定义代理模板
+ *   公共代理（allorigins / codetabs / corsproxy / thingproxy）
+ * ==================================================================== */
+const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 ' +
+  '(KHTML, like Gecko) EdgiOS/121.0.2277.107 Version/17.0 Mobile/15E148 Safari/604.1';
+
+const PUBLIC_PROXIES = [
+  { id: 'allorigins', name: 'AllOrigins', tpl: 'https://api.allorigins.win/raw?url={url}' },
+  { id: 'codetabs', name: 'CodeTabs', tpl: 'https://api.codetabs.com/v1/proxy?quest={url}' },
+  { id: 'corsproxy', name: 'corsproxy.io', tpl: 'https://corsproxy.io/?url={url}' },
+  { id: 'thingproxy', name: 'ThingProxy', tpl: 'https://thingproxy.freeboard.io/fetch/{url}' },
+];
+
+/** 第三方解析接口：国内网络可直连、自带 CORS，作为没有自建反代时的兜底通道 */
+const PARSE_APIS = [
+  { id: 'xingzhige', name: '星之阁', tpl: 'https://api.xingzhige.com/API/douyin/?url={url}', timeout: 15000 },
+  { id: 'vvhan', name: 'vvhan', tpl: 'https://api.vvhan.com/api/douyin?url={url}', timeout: 6000 },
+  { id: '52vmy', name: '52vmy', tpl: 'https://api.52vmy.cn/api/video/douyin?url={url}', timeout: 6000 },
+  { id: 'kuleu', name: 'kuleu', tpl: 'https://api.kuleu.com/api/douyin?url={url}', timeout: 6000 },
+];
+
+const DEFAULT_CFG = {
+  channel: 'auto',
+  dyPrefix: '/dyapi',
+  iesPrefix: '/dyapi-ies',
+  vPrefix: '/dyapi-v',
+  customTpl: '',
+  proxies: ['allorigins', 'codetabs', 'corsproxy'],
+  parseApis: ['xingzhige', 'vvhan', '52vmy'],
+  prefChannel: '',
+  cookieMode: 'header',
+  timeout: 15000,
+  ua: UA_IPHONE,
+  cookie: '',
+  guestCookie: '',
+};
+
+const LS_KEY = 'dyweb.cfg.v1';
+let cfg = Object.assign({}, DEFAULT_CFG);
+function loadCfg() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) cfg = Object.assign({}, DEFAULT_CFG, JSON.parse(raw));
+  } catch (_) {}
+}
+function saveCfg() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); } catch (_) {}
+}
+/** 组合出实际用于请求的 Cookie（用户 Cookie 优先，其次游客 ttwid） */
+function effectiveCookie() {
+  const ck = (cfg.cookie || '').trim();
+  if (ck) return ck;
+  const g = (cfg.guestCookie || '').trim();
+  if (!g) return '';
+  return /ttwid=/i.test(g) ? g : `ttwid=${g.replace(/^ttwid=/, '')}`;
+}
+
+let edgeOk = null; // null=未探测，true/false=探测结果
+let lastChannelUsed = '';
+/** 通道健康状态：失败后短时间内不再重试，避免每次都白等超时 */
+const DEAD_TTL = 5 * 60 * 1000;
+const deadUntil = {};
+const deadKey = (ch, host) => ch + '|' + (host || '');
+function markDead(ch, host) { deadUntil[deadKey(ch, host)] = nowMs() + DEAD_TTL; }
+function isDead(ch, host) { return (deadUntil[deadKey(ch, host)] || 0) > nowMs(); }
+/** 单次解析的总时间上限（毫秒，0=不限制）：没有自建反代时避免在公共代理上白等 */
+let parseDeadline = 0;
+
+function hostOf(u) { try { return new URL(u, location.href).hostname; } catch (_) { return ''; } }
+
+function edgePrefixFor(host) {
+  if (host === 'www.douyin.com' || host === 'douyin.com') return cfg.dyPrefix;
+  if (host === 'www.iesdouyin.com' || host === 'iesdouyin.com') return cfg.iesPrefix;
+  if (host === 'v.douyin.com') return cfg.vPrefix;
+  return null;
+}
+
+/** 生成某个通道下真正请求的 URL 与请求头 */
+function buildChannelRequest(channel, target, opts) {
+  opts = opts || {};
+  const headers = Object.assign({}, opts.extraHeaders || {});
+  const cookie = opts.cookie || '';
+
+  if (channel === 'direct') {
+    return { url: target, headers, proxy: false };
+  }
+
+  if (channel === 'edge') {
+    let u;
+    try { u = new URL(target, location.href); } catch (_) { return null; }
+    const prefix = edgePrefixFor(u.hostname);
+    if (!prefix) return null;
+    const base = String(prefix).replace(/\/+$/, '');
+    let url = base + u.pathname + u.search;
+    // 同源请求不触发 CORS 预检，可安全带上自定义头，由边缘规则映射回 Cookie/UA
+    if (cookie) {
+      headers['X-Dy-Cookie'] = cookie;
+      if (cfg.cookieMode === 'query') {
+        url += (url.includes('?') ? '&' : '?') + '__dyck=' + encodeURIComponent(cookie);
+      }
+    }
+    if (cfg.ua) headers['X-Dy-Ua'] = cfg.ua;
+    headers['X-Dy-Referer'] = 'https://www.douyin.com/';
+    return { url, headers, proxy: true };
+  }
+
+  if (channel === 'custom') {
+    const tpl = (cfg.customTpl || '').trim();
+    if (!tpl) return null;
+    let url = tpl.includes('{url}')
+      ? tpl.replace('{url}', encodeURIComponent(target))
+      : tpl.replace(/\/+$/, '') + target;
+    if (cookie && cfg.cookieMode === 'query') {
+      url += (url.includes('?') ? '&' : '?') + '__dyck=' + encodeURIComponent(cookie);
+    }
+    if (cookie) headers['X-Dy-Cookie'] = cookie;
+    return { url, headers, proxy: true };
+  }
+
+  const p = PUBLIC_PROXIES.find((x) => x.id === channel);
+  if (p) {
+    // 公共代理无法自定义请求头（会触发预检），只发最简单的 GET
+    return { url: p.tpl.replace('{url}', encodeURIComponent(target)), headers: {}, proxy: true };
+  }
+  return null;
+}
+
+/** 自动模式下的尝试顺序 */
+function channelOrder(target, opts) {
+  opts = opts || {};
+  if (cfg.channel && cfg.channel !== 'auto' && cfg.channel !== 'parseapi') return [cfg.channel];
+  const host = hostOf(target);
+  const order = [];
+  if (cfg.prefChannel && !isDead(cfg.prefChannel, host)) order.push(cfg.prefChannel);
+  if (edgeOk !== false && edgePrefixFor(host)) order.push('edge');
+  if (opts.allowDirect !== false) order.push('direct');
+  if (edgeOk !== false && !edgePrefixFor(host)) order.push('edge');
+  if (cfg.customTpl) order.push('custom');
+  for (const id of cfg.proxies) if (PUBLIC_PROXIES.some((p) => p.id === id)) order.push(id);
+  if (!order.length) order.push('direct');
+  // 去重 + 跳过最近失败的通道（自建反代和直连除外，它们的失败也可缓存）
+  const seen = new Set();
+  const fresh = order.filter((ch) => {
+    if (seen.has(ch)) return false;
+    seen.add(ch);
+    return !isDead(ch, host);
+  });
+  return fresh.length ? fresh : [order[0]];
+}
+
+async function fetchWithTimeout(url, options, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms || cfg.timeout || 20000);
+  try {
+    return await fetch(url, Object.assign({ referrerPolicy: 'no-referrer' }, options, { signal: ctrl.signal }));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 通过通道链请求，返回 {res, channel} */
+async function dyFetch(target, opts) {
+  opts = opts || {};
+  const order = channelOrder(target, opts);
+  const host = hostOf(target);
+  let lastErr = null;
+  for (const ch of order) {
+    if (parseDeadline && nowMs() > parseDeadline) { lastErr = new Error('已超出本次解析等待时间'); break; }
+    const built = buildChannelRequest(ch, target, opts);
+    if (!built) continue;
+    try {
+      const res = await fetchWithTimeout(built.url, {
+        method: opts.method || 'GET',
+        headers: built.headers,
+        body: opts.body,
+        redirect: 'follow',
+        credentials: 'omit',
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        lastErr = new Error('HTTP ' + res.status);
+        logLine(`✗ [${ch}] ${res.status} ${target.slice(0, 90)}`);
+        markDead(ch, host);
+        continue;
+      }
+      lastChannelUsed = ch;
+      if (cfg.channel === 'auto' && cfg.prefChannel !== ch) { cfg.prefChannel = ch; saveCfg(); }
+      logLine(`✓ [${ch}] ${target.slice(0, 90)}`);
+      return { res, channel: ch };
+    } catch (e) {
+      lastErr = e;
+      logLine(`✗ [${ch}] ${(e && e.message) || e} ${target.slice(0, 80)}`);
+      markDead(ch, host);
+    }
+  }
+  throw lastErr || new Error('所有通道均不可用');
+}
+
+/** 探测本站反代是否可用（同源请求，不受 CORS 影响） */
+async function probeEdge() {
+  const base = String(cfg.dyPrefix || '').replace(/\/+$/, '');
+  if (!base) { edgeOk = false; return false; }
+  try {
+    const res = await fetchWithTimeout(base + '/favicon.ico', { method: 'GET', cache: 'no-store' }, 6000);
+    edgeOk = res.ok;
+    // 防误判：静态托管常把未知路径回退成 index.html，这里排除返回本页面的情况
+    if (edgeOk) {
+      const ct = res.headers.get('content-type') || '';
+      if (/text\/html/i.test(ct)) {
+        const t = await res.text();
+        if (/<!DOCTYPE html/i.test(t) || /data-act="/.test(t) || /抖音下载/.test(t)) edgeOk = false;
+      }
+    }
+  } catch (_) {
+    edgeOk = false;
+  }
+  updateChannelChip();
+  return edgeOk;
+}
+
+function updateChannelChip() {
+  const chip = $('channelChip'), txt = $('channelChipText');
+  if (!chip || !txt) return;
+  chip.classList.remove('ok', 'warn', 'err');
+  let label = '';
+  if (cfg.channel !== 'auto') {
+    const names = { edge: '本站反代', direct: '直连', custom: '自定义代理' };
+    label = '通道：' + (names[cfg.channel] || cfg.channel);
+    chip.classList.add(edgeOk === false && cfg.channel === 'edge' ? 'err' : 'warn');
+  } else if (edgeOk === true) {
+    label = '通道：本站反代'; chip.classList.add('ok');
+  } else if (edgeOk === false) {
+    label = '通道：自动降级'; chip.classList.add('warn');
+  } else {
+    label = '通道检测中…';
+  }
+  txt.textContent = label;
+}
+
+/* ======================= 6. 抖音解析（移植自 DouyinParser.kt） ======================= */
+const API = {
+  detail: 'https://www.douyin.com/aweme/v1/web/aweme/detail/',
+  mix: 'https://www.douyin.com/aweme/v1/web/mix/aweme/',
+  comments: 'https://www.douyin.com/aweme/v1/web/comment/list/',
+  replies: 'https://www.douyin.com/aweme/v1/web/comment/list/reply/',
+  self: 'https://www.douyin.com/aweme/v1/web/user/profile/self/?device_platform=webapp&aid=6383',
+  share: (type, id) => `https://www.iesdouyin.com/share/${type}/${id}`,
+};
+
+const DouyinParser = (() => {
+  const extractDouyinUrl = (text) => {
+    const m = /https?:\/\/[^\s]*douyin\.com[^\s]*/.exec(text || '');
+    return m ? m[0] : null;
+  };
+
+  /** 从任意 URL 文本里取出 类型 + 作品 ID */
+  function matchTypeId(url) {
+    let m = /douyin\.com\/(?:share\/)?(note|video|slides)\/(\d+)/.exec(url || '');
+    if (m) return { type: m[1] === 'slides' ? 'note' : m[1], id: m[2], slides: m[1] === 'slides' };
+    m = /[?&]modal_id=(\d+)/.exec(url || '');
+    if (m) return { type: 'video', id: m[1] };
+    m = /[?&]aweme_id=(\d+)/.exec(url || '');
+    if (m) return { type: 'video', id: m[1] };
+    return null;
+  }
+
+  /** 从 HTML / JSON 文本里兜底提取作品 ID */
+  function idFromHtml(text) {
+    if (!text) return null;
+    const pats = [
+      /"aweme_id"\s*:\s*"(\d{6,})"/,
+      /"awemeId"\s*:\s*"(\d{6,})"/,
+      /douyin\.com\/(?:share\/)?(?:video|note|slides)\/(\d{6,})/,
+      /iesdouyin\.com\/share\/(?:video|note|slides)\/(\d{6,})/,
+      /"itemId"\s*:\s*"(\d{6,})"/,
+    ];
+    for (const p of pats) {
+      const m = p.exec(text);
+      if (m) return { id: m[1], type: /note|slides/.test(m[0]) ? 'note' : 'video' };
+    }
+    return null;
+  }
+
+  /** 短链解析：直连跟随 → AllOrigins（可拿到最终 URL）→ 通道抓 HTML 兜底 */
+  async function resolveShortLink(shortUrl) {
+    // 1) 直连跟随重定向
+    try {
+      const res = await fetchWithTimeout(shortUrl, { method: 'GET', redirect: 'follow' }, 12000);
+      const hit = matchTypeId(res.url);
+      if (hit) { logLine('短链直连解析成功: ' + res.url.slice(0, 100)); return hit; }
+    } catch (e) { logLine('短链直连失败: ' + (e && e.message)); }
+
+    // 2) AllOrigins 的 get 接口会返回重定向后的最终地址
+    try {
+      const api = 'https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl);
+      const res = await fetchWithTimeout(api, { method: 'GET' }, 15000);
+      const j = await res.json();
+      const finalUrl = (j && j.status && j.status.url) || '';
+      let hit = matchTypeId(finalUrl);
+      if (hit) { logLine('短链代理解析成功: ' + finalUrl.slice(0, 100)); return hit; }
+      hit = idFromHtml(j && j.contents);
+      if (hit) { logLine('短链 HTML 解析成功: ' + hit.id); return hit; }
+    } catch (e) { logLine('短链代理失败: ' + (e && e.message)); }
+
+    // 3) 通道抓取（代理会自动跟随跳转，返回落地页 HTML）
+    try {
+      const { res } = await dyFetch(shortUrl, { allowDirect: false });
+      const html = await res.text();
+      const hit = matchTypeId(html) || idFromHtml(html.slice(0, 200000));
+      if (hit) { logLine('短链通道解析成功: ' + hit.id); return hit; }
+      const router = extractRouterData(html);
+      if (router) return { routerData: router.data, type: 'video', id: router.id };
+    } catch (e) { logLine('短链通道失败: ' + (e && e.message)); }
+    return null;
+  }
+
+  /** 解析 window._ROUTER_DATA（对应 fetchRouterData） */
+  function extractRouterData(html) {
+    if (!html) return null;
+    const marker = 'window._ROUTER_DATA';
+    const mi = html.indexOf(marker);
+    if (mi === -1) return null;
+    const eq = html.indexOf('=', mi);
+    if (eq === -1) return null;
+    const brace = html.indexOf('{', eq);
+    if (brace === -1) return null;
+    let depth = 0, inStr = false, escaped = false;
+    for (let i = brace; i < html.length; i++) {
+      const ch = html[i];
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\') { escaped = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          const raw = html.slice(brace, i + 1);
+          try {
+            const data = JSON.parse(raw);
+            const loader = data.loaderData || {};
+            let id = '';
+            for (const key of Object.keys(loader)) {
+              const m = /(\d{6,})/.exec(key);
+              if (m) { id = m[1]; break; }
+            }
+            return { data, id };
+          } catch (e) { return null; }
+        }
+      }
+    }
+    return null;
+  }
+
+  async function fetchDetailItem(noteId, cookie) {
+    try {
+      const params = {
+        aweme_id: noteId,
+        version_code: '190500',
+        version_name: '19.5.0',
+        aid: '6383',
+      };
+      const url = ABogus.signUrl(API.detail, params, cfg.ua);
+      const { res } = await dyFetch(url, { cookie });
+      const body = await res.text();
+      if (!body) return null;
+      const j = JSON.parse(body);
+      return j.aweme_detail || null;
+    } catch (e) {
+      logLine('Detail API 失败: ' + (e && e.message));
+      return null;
+    }
+  }
+
+  async function fetchRouterData(type, id, cookie, shortUrl) {
+    try {
+      const target = shortUrl || API.share(type, id);
+      const { res } = await dyFetch(target, { cookie, allowDirect: false });
+      const html = await res.text();
+      const router = extractRouterData(html);
+      if (router) return router.data;
+      // 个别情况下返回的是 JSON
+      try {
+        const j = JSON.parse(html);
+        if (j && j.loaderData) return j;
+      } catch (_) {}
+      return null;
+    } catch (e) {
+      logLine('分享页抓取失败: ' + (e && e.message));
+      return null;
+    }
+  }
+
+  function getItem(data, noteId) {
+    const loader = data.loaderData;
+    if (!loader) throw new Error('缺少 loaderData');
+    const keys = Object.keys(loader);
+    let pageKey = keys.find((k) => k.endsWith('/page') && k.includes(noteId));
+    if (!pageKey) pageKey = keys.find((k) => k.endsWith('/page'));
+    if (!pageKey) throw new Error('找不到 page key');
+    const list = loader[pageKey].videoInfoRes.item_list;
+    return list[0];
+  }
+
+  function extractImages(item) {
+    const out = [];
+    const arr = item && item.images;
+    if (!arr) return out;
+    for (const img of arr) {
+      const urls = img && img.url_list;
+      if (urls && urls.length) out.push(urls[urls.length - 1]);
+    }
+    return out;
+  }
+
+  function extractBestVideoUrl(videoObj) {
+    if (!videoObj) return null;
+    const bitRate = videoObj.bit_rate;
+    if (bitRate && bitRate.length) {
+      const cands = [];
+      for (const br of bitRate) {
+        const pa = br && br.play_addr;
+        const urls = pa && pa.url_list;
+        if (!urls || !urls.length) continue;
+        const url = String(urls[urls.length - 1]).replace('playwm', 'play');
+        cands.push({ res: Math.max(pa.width || 0, pa.height || 0), size: pa.data_size || 0, url });
+      }
+      if (cands.length) {
+        cands.sort((a, b) => (a.res - b.res) || (a.size - b.size));
+        return cands[cands.length - 1].url;
+      }
+    }
+    const pa = videoObj.play_addr;
+    const urls = pa && pa.url_list;
+    if (urls && urls.length) return String(urls[urls.length - 1]).replace('playwm', 'play');
+    return null;
+  }
+
+  function extractLiveVideos(item) {
+    const out = [];
+    const arr = item && item.images;
+    if (!arr) return out;
+    for (const img of arr) {
+      const v = img && img.video;
+      const vu = extractBestVideoUrl(v);
+      if (!vu) continue;
+      out.push({
+        awemeId: item.aweme_id || '',
+        desc: item.desc || '',
+        videoUrl: vu,
+        coverUrl: (img.url_list && img.url_list[0]) || '',
+        duration: v.duration || 0,
+        width: v.width || 0,
+        height: v.height || 0,
+      });
+    }
+    return out;
+  }
+
+  function withMusic(result, item) {
+    const music = item && item.music;
+    if (!music) return result;
+    const urls = music.play_url && music.play_url.url_list;
+    result.musicUrl = urls && urls.length ? (urls[0] || '') : '';
+    result.musicTitle = music.title || '';
+    result.musicAuthor = music.author || '';
+    return result;
+  }
+
+  /** 详情接口结果 → 统一结构（对应 parseDetailItem） */
+  function parseDetailItem(item, noteType, noteId) {
+    const desc = item.desc || '';
+    const images = extractImages(item);
+    const r = {
+      type: '', videoId: noteId, description: desc, imageUrls: [], videoUrl: '',
+      audioUrl: '', groupId: '', coverUrl: '', duration: 0, width: 0, height: 0,
+      liveVideos: [], musicUrl: '', musicTitle: '', musicAuthor: '', error: null,
+    };
+
+    if (images.length) {
+      const lives = extractLiveVideos(item);
+      if (lives.length) {
+        r.type = 'live'; r.imageUrls = images; r.liveVideos = lives; r.coverUrl = images[0];
+        return r;
+      }
+      const hasGroup = !!(item.group_id_str || '');
+      const video = item.video;
+      const placeholder = video && video.duration === 0 && video.width === 0;
+      if (placeholder && hasGroup) {
+        r.type = 'mix'; r.imageUrls = images; r.groupId = item.group_id_str; r.coverUrl = images[0];
+        try {
+          const raw = video.play_addr && video.play_addr.url_list && video.play_addr.url_list[0];
+          if (raw && String(raw).includes('video_id=')) {
+            r.audioUrl = String(raw).split('video_id=')[1].split('&')[0];
+          }
+        } catch (_) {}
+        return r;
+      }
+      r.type = 'note'; r.imageUrls = images; r.coverUrl = images[0];
+      return r;
+    }
+
+    if (item.video) {
+      const v = item.video;
+      r.type = 'video';
+      r.videoUrl = extractBestVideoUrl(v) || '';
+      r.coverUrl = (v.cover && v.cover.url_list && v.cover.url_list[0]) || '';
+      r.duration = v.duration || 0;
+      r.width = v.width || 0; r.height = v.height || 0;
+      return r;
+    }
+    r.error = '无法识别内容类型';
+    return r;
+  }
+
+  function parseVideo(data, noteId) {
+    const item = getItem(data, noteId);
+    return parseDetailItem(item, 'video', noteId);
+  }
+  function parseNote(data, noteId) {
+    const item = getItem(data, noteId);
+    return parseDetailItem(item, 'note', noteId);
+  }
+
+  const emptyResult = (extra) => Object.assign({
+    type: '', videoId: '', description: '', imageUrls: [], videoUrl: '', audioUrl: '',
+    groupId: '', coverUrl: '', duration: 0, width: 0, height: 0, liveVideos: [],
+    musicUrl: '', musicTitle: '', musicAuthor: '', author: '',
+    source: 'official', sourceName: '', error: null,
+  }, extra || {});
+
+  /** 走抖音官方接口 + 分享页（数据最完整：实况图集、合集、背景音乐、评论） */
+  async function parseOfficial(shareUrl, cookie) {
+    try {
+      const found = extractDouyinUrl(shareUrl) || shareUrl.trim();
+      let noteType = '', noteId = '', shortUrl = null, routerData = null;
+
+      const hit = matchTypeId(found);
+      if (hit) {
+        noteType = hit.type; noteId = hit.id;
+      } else if (/douyin\.com/.test(found)) {
+        shortUrl = found;
+        const resolved = await resolveShortLink(found);
+        if (!resolved) return emptyResult({ error: '无法解析链接（短链解析失败，请尝试粘贴完整作品链接）' });
+        if (resolved.routerData) { routerData = resolved.routerData; noteId = resolved.id || ''; noteType = resolved.type || 'video'; }
+        else { noteType = resolved.type; noteId = resolved.id; }
+      } else {
+        return emptyResult({ error: '没有找到抖音链接，请检查输入内容' });
+      }
+
+      // 1) 优先 Detail API（数据完整，能正确识别实况图集）
+      if (noteId) {
+        const item = await fetchDetailItem(noteId, cookie);
+        if (item) return withMusic(parseDetailItem(item, noteType, noteId), item);
+      }
+
+      // 2) 回退分享页
+      if (!routerData && noteId) routerData = await fetchRouterData(noteType, noteId, cookie, shortUrl);
+      if (routerData) {
+        const id = noteId || (/^\d+$/.test(String(routerData.id || '')) ? String(routerData.id) : '');
+        let parsed;
+        try {
+          parsed = noteType === 'note' ? parseNote(routerData, id) : parseVideo(routerData, id);
+        } catch (e) {
+          parsed = emptyResult({ error: '分享页解析失败: ' + (e && e.message) });
+        }
+        try { return withMusic(parsed, getItem(routerData, id)); } catch (_) { return parsed; }
+      }
+
+      return emptyResult({
+        videoId: noteId,
+        error: '官方接口不可用（浏览器跨域限制）。可在「设置 → 接口通道」配置本站反代后重试。',
+      });
+    } catch (e) {
+      return emptyResult({ error: '解析失败: ' + ((e && e.message) || e) });
+    }
+  }
+
+  /* ---------- 第三方解析接口（国内可直连，作为兜底） ---------- */
+  function collectHttpUrls(obj, out) {
+    if (typeof obj === 'string') { if (/^https?:\/\//i.test(obj)) out.push(obj); return; }
+    if (Array.isArray(obj)) { obj.forEach((v) => collectHttpUrls(v, out)); return; }
+    if (obj && typeof obj === 'object') for (const k of Object.keys(obj)) collectHttpUrls(obj[k], out);
+  }
+
+  /** 把第三方接口返回映射成统一结果结构 */
+  function mapParseApiResult(j, api) {
+    if (!j || typeof j !== 'object') return emptyResult({ error: api.name + ' 返回格式异常' });
+    const code = j.code != null ? Number(j.code) : 0;
+    if (code !== 0 && code !== 200) {
+      return emptyResult({ error: `${api.name}：${j.msg || j.message || '解析失败'}` });
+    }
+    const d = j.data || j;
+    const item = d.item || {};
+    const jx = d.jx || {};
+    const author = (d.author && (d.author.name || d.author.nickname)) || '';
+
+    const urls = [];
+    collectHttpUrls(j, urls);
+    const uniq = Array.from(new Set(urls));
+    const isImg = (u) => /\.(?:jpe?g|webp|png|gif|heic|avif)(?:\?|$)/i.test(u) || /douyinpic\.com/i.test(u);
+    const isVid = (u) => /\.mp4(?:\?|$)/i.test(u) || /mime_type=video/i.test(u) || /douyinvod\.com/i.test(u) || /\.m3u8/i.test(u);
+    const isAudio = (u) => /\.mp3(?:\?|$)/i.test(u) || /mime_type=audio/i.test(u) || /douyinstatic/i.test(u) && /music|audio/i.test(u);
+
+    let videoUrl = String(item.url || item.video_url || item.video || item.play || '');
+    if (!/^https?:/i.test(videoUrl)) videoUrl = uniq.find(isVid) || '';
+    const musicUrl = String(item.muisic || item.music || item.music_url || uniq.find(isAudio) || '');
+
+    let images = [];
+    collectHttpUrls(item.images || item.image_list || item.pics || d.images || [], images);
+    images = images.filter((u) => !/aweme-avatar|avatar/i.test(u));
+    if (!images.length) images = uniq.filter((u) => isImg(u) && !/aweme-avatar|avatar/i.test(u));
+    images = Array.from(new Set(images));
+
+    let cover = String(item.cover || item.cover_gif || d.cover || '');
+    if (!/^https?:/i.test(cover)) cover = images[0] || uniq.find(isImg) || '';
+
+    let duration = Number(item.duration) || 0;
+    if (duration > 0 && duration < 1000) duration *= 1000;
+
+    const isVideo = !!videoUrl;
+    const r = emptyResult({
+      type: isVideo ? 'video' : (images.length ? 'note' : ''),
+      videoId: String(jx.item_id || jx.aweme_id || d.aweme_id || d.item_id || ''),
+      description: String(item.title || jx.title || d.title || ''),
+      videoUrl: isVideo ? videoUrl : '',
+      imageUrls: isVideo ? [] : images,
+      coverUrl: cover,
+      musicUrl,
+      musicTitle: '',
+      musicAuthor: author,
+      author,
+      duration,
+      width: Number(item.width) || 0,
+      height: Number(item.height) || 0,
+      source: 'parseapi',
+      sourceName: api.name,
+    });
+    if (!r.type) return emptyResult({ error: api.name + ' 未返回可下载内容（可能是图文/直播等暂不支持的类型）' });
+    return r;
+  }
+
+  async function parseViaApi(input) {
+    const list = PARSE_APIS.filter((a) => cfg.parseApis.includes(a.id));
+    let lastErr = '第三方解析接口均不可用';
+    for (const api of list) {
+      if (isDead(api.id, 'api')) { lastErr = `${api.name}：暂时不可用`; continue; }
+      const target = api.tpl.replace('{url}', encodeURIComponent(input));
+      try {
+        const res = await fetchWithTimeout(target, {
+          method: 'GET', credentials: 'omit', cache: 'no-store',
+        }, api.timeout || 10000);
+        if (!res.ok) {
+          logLine(`✗ [${api.id}] HTTP ${res.status}`);
+          markDead(api.id, 'api');
+          lastErr = `${api.name}：HTTP ${res.status}`;
+          continue;
+        }
+        const txt = await res.text();
+        let j = null;
+        try { j = JSON.parse(txt); } catch (_) {}
+        if (!j) { logLine(`✗ [${api.id}] 非 JSON`); markDead(api.id, 'api'); lastErr = `${api.name}：返回异常`; continue; }
+        const r = mapParseApiResult(j, api);
+        if (!r.error) { logLine(`✓ [${api.id}] 第三方接口解析成功`); return r; }
+        logLine(`✗ [${api.id}] ${r.error}`);
+        lastErr = r.error;
+        // 接口明确说取不到资源（多为短链过期），换个接口也没用
+        if (/资源id获取失败|解析失败|不存在|删除/.test(r.error)) break;
+      } catch (e) {
+        logLine(`✗ [${api.id}] ${(e && e.message) || e}`);
+        markDead(api.id, 'api');
+        lastErr = `${api.name}：${(e && e.message) || e}`;
+      }
+    }
+    return emptyResult({ error: lastErr });
+  }
+
+  /** 主入口：解析分享链接（对应 parse()） */
+  async function parse(shareUrl, cookie) {
+    const input = (extractDouyinUrl(shareUrl) || shareUrl || '').trim();
+    if (!input) return emptyResult({ error: '请输入抖音分享链接' });
+
+    // 通道策略：有自建反代 → 官方接口优先；否则 → 第三方接口优先（直连/公共代理在境内基本不可用）
+    const selfProxyReady = !!cfg.customTpl || edgeOk === true;
+    let order;
+    if (cfg.channel === 'parseapi') order = ['api', 'official'];
+    else if (cfg.channel !== 'auto') order = ['official', 'api'];
+    else order = selfProxyReady ? ['official', 'api'] : ['api', 'official'];
+
+    let first = null;
+    for (const step of order) {
+      if (S) S.parseHint = step === 'api' ? '正在请求第三方解析接口…' : '正在尝试抖音官方接口…';
+      if (typeof paint === 'function') paint();
+      // 没有自建反代时，官方接口这边最多等 20 秒（公共代理在境内基本超时）
+      parseDeadline = (step === 'official' && !selfProxyReady) ? nowMs() + 20000 : 0;
+      const r = step === 'api'
+        ? await parseViaApi(input)
+        : await parseOfficial(input, cookie);
+      parseDeadline = 0;
+      if (r && !r.error) return r;
+      if (!first) first = r;
+    }
+    const shortLink = /v\.douyin\.com/.test(input);
+    const tail = shortLink ? '　分享短链有时效，过期后请重新复制分享链接，或改用完整作品链接（https://www.douyin.com/video/…）。' : '';
+    if (first && first.error) return Object.assign(first, { error: first.error + tail });
+    return emptyResult({ error: '解析失败，请稍后重试。' + tail });
+  }
+
+  async function fetchIdentity(cookie) {
+    if (!cookie) return { loggedIn: false, nickname: '' };
+    try {
+      const { res } = await dyFetch(API.self, { cookie });
+      const body = await res.text();
+      const j = JSON.parse(body);
+      if (j.status_code !== 0) return { loggedIn: false, nickname: '' };
+      const nickname = (j.user && j.user.nickname) || '';
+      return { loggedIn: true, nickname };
+    } catch (e) {
+      return { loggedIn: false, nickname: '', err: (e && e.message) || '' };
+    }
+  }
+
+  async function validateCookie(cookie) {
+    if (!cookie || !cookie.trim()) return { ok: false, msg: 'Cookie 为空' };
+    const hasSession = /sessionid/i.test(cookie);
+    const hasPassport = /passport/i.test(cookie);
+    if (!hasSession && !hasPassport) return { ok: false, msg: 'Cookie 缺少必要字段（sessionid 或 passport）' };
+    try {
+      const { res } = await dyFetch(API.self, { cookie });
+      const body = await res.text();
+      if (!body) return { ok: false, msg: 'API 无响应，请检查网络或接口通道' };
+      const j = JSON.parse(body);
+      if (j.status_code === 0) {
+        const nk = (j.user && j.user.nickname) || '';
+        return { ok: true, msg: nk ? 'Cookie 有效 · ' + nk : 'Cookie 有效' };
+      }
+      if (j.status_code === 8) return { ok: false, msg: '登录态已过期，请重新复制 Cookie' };
+      return { ok: false, msg: 'API 返回错误 (status=' + j.status_code + ')，Cookie 无效' };
+    } catch (e) {
+      return { ok: false, msg: '验证失败: ' + ((e && e.message) || e) };
+    }
+  }
+
+  /** 合集/混剪：Detail → mix_id → mix API 分页（对应 fetchAllMixVideosWithABogus） */
+  async function fetchAllMix(noteId, cookie, onProgress) {
+    try {
+      const params = { aweme_id: noteId, version_code: '190500', version_name: '19.5.0', aid: '6383' };
+      const { res } = await dyFetch(ABogus.signUrl(API.detail, params, cfg.ua), { cookie });
+      const body = await res.text();
+      if (!body) return { videos: [], error: 'Detail API 返回空' };
+      const ad = JSON.parse(body).aweme_detail;
+      const mixId = ad && ad.mix_info && ad.mix_info.mix_id;
+      if (!mixId) return { videos: [], error: '该链接不是合集（无 mix_id）' };
+
+      const videos = [];
+      let cursor = 0, hasMore = true, page = 0;
+      while (hasMore && page < 50) {
+        page++;
+        const mp = {
+          mix_id: mixId, cursor: String(cursor), count: '20',
+          version_code: '170400', version_name: '17.4.0', aid: '6383',
+        };
+        const r2 = await dyFetch(ABogus.signUrl(API.mix, mp, cfg.ua), { cookie });
+        const b2 = await r2.res.text();
+        const data = JSON.parse(b2);
+        if (data.status_code !== 0) return { videos, error: `第${page}页失败: status=${data.status_code}` };
+        if (data.aweme_list) {
+          for (const aw of data.aweme_list) {
+            const v = aw.video;
+            const vu = extractBestVideoUrl(v);
+            if (!vu) continue;
+            videos.push({
+              awemeId: aw.aweme_id || '', desc: aw.desc || '', videoUrl: vu, coverUrl: '',
+              duration: v.duration || 0, width: v.width || 0, height: v.height || 0,
+            });
+          }
+        }
+        if (onProgress) onProgress(videos.length);
+        hasMore = data.has_more === true || data.has_more === 1;
+        cursor = data.cursor != null ? data.cursor : cursor + 20;
+        await sleep(120);
+      }
+      return { videos, error: null };
+    } catch (e) {
+      return { videos: [], error: '获取失败: ' + ((e && e.message) || e) };
+    }
+  }
+
+  function mapComment(c) {
+    const imgUrls = [];
+    if (c.image_list) {
+      for (const it of c.image_list) {
+        const urls = it && it.origin_url && it.origin_url.url_list;
+        if (urls && urls.length) imgUrls.push(urls[urls.length - 1]);
+      }
+    }
+    let stickerUrl = '';
+    const su = c.sticker && c.sticker.static_url && c.sticker.static_url.url_list;
+    if (su && su.length) stickerUrl = su[su.length - 1];
+    const textExtra = [];
+    if (c.text_extra) for (const t of c.text_extra) if (t.hashtag_name) textExtra.push(t.hashtag_name);
+    const emoticons = [];
+    if (c.emoticon_list) {
+      for (const e of c.emoticon_list) {
+        const urls = e && e.static_url && e.static_url.url_list;
+        if (urls && urls.length) emoticons.push(urls[urls.length - 1]);
+      }
+    }
+    return {
+      cid: c.cid || '', text: c.text || '',
+      nickname: (c.user && c.user.nickname) || '',
+      diggCount: c.digg_count || 0, createTime: c.create_time || 0,
+      imageUrls: imgUrls, stickerUrl, textExtra, emoticonUrls: emoticons,
+    };
+  }
+
+  /** 评论列表（对应 fetchComments） */
+  async function fetchComments(awemeId, cookie, startCursor, maxPages, onProgress) {
+    try {
+      const all = [];
+      let cursor = startCursor || 0, hasMore = true, page = 0;
+      while (hasMore && page < (maxPages || 3)) {
+        page++;
+        const params = {
+          aweme_id: awemeId, cursor: String(cursor), count: '20', item_type: '0',
+          version_code: '170400', version_name: '17.4.0', aid: '6383',
+        };
+        const { res } = await dyFetch(ABogus.signUrl(API.comments, params, cfg.ua), { cookie });
+        const data = JSON.parse(await res.text());
+        if (data.status_code !== 0) {
+          if (all.length) break;
+          return { comments: [], hasMore: false, nextCursor: cursor, error: '评论 API status=' + data.status_code };
+        }
+        if (data.comments) for (const c of data.comments) all.push(mapComment(c));
+        if (onProgress) onProgress(all.length);
+        hasMore = data.has_more === true || data.has_more === 1;
+        cursor = data.cursor != null ? data.cursor : cursor;
+        await sleep(150);
+      }
+      return { comments: all, hasMore, nextCursor: cursor, error: null };
+    } catch (e) {
+      return { comments: [], hasMore: false, nextCursor: 0, error: '获取评论失败: ' + ((e && e.message) || e) };
+    }
+  }
+
+  /** 评论回复（对应 fetchCommentReplies） */
+  async function fetchReplies(awemeId, commentId, cookie, startCursor, maxPages) {
+    try {
+      const all = [];
+      let cur = startCursor || 0, hasMore = true, page = 0;
+      while (hasMore && page < (maxPages || 3)) {
+        page++;
+        const params = {
+          item_id: awemeId, comment_id: commentId, cursor: String(cur), count: '10',
+          item_type: '0', version_code: '170400', version_name: '17.4.0', aid: '6383',
+        };
+        const { res } = await dyFetch(ABogus.signUrl(API.replies, params, cfg.ua), { cookie });
+        const data = JSON.parse(await res.text());
+        if (data.status_code !== 0) {
+          if (all.length) break;
+          return { comments: [], hasMore: false, error: '回复 API status=' + data.status_code };
+        }
+        if (data.comments) for (const c of data.comments) all.push(mapComment(c));
+        hasMore = data.has_more === true || data.has_more === 1;
+        cur = data.cursor != null ? data.cursor : cur;
+        await sleep(150);
+      }
+      return { comments: all, hasMore, error: null };
+    } catch (e) {
+      return { comments: [], hasMore: false, error: '获取回复失败: ' + ((e && e.message) || e) };
+    }
+  }
+
+  return {
+    parse, matchTypeId, fetchIdentity, validateCookie, fetchAllMix,
+    fetchComments, fetchReplies, extractDouyinUrl, extractBestVideoUrl,
+    // 以下两个仅用于调试/自检
+    mapParseApiResult, parseViaApi,
+  };
+})();
+
+/* ======================= 7. 媒体下载（带进度） ======================= */
+/** 通过通道链下载二进制，支持进度回调；返回 {blob, channel} */
+async function downloadBinary(url, opts) {
+  opts = opts || {};
+  const order = channelOrder(url, { cookie: opts.cookie });
+  let lastErr = null;
+  for (const ch of order) {
+    const built = buildChannelRequest(ch, url, { cookie: opts.cookie, extraHeaders: { Accept: '*/*' } });
+    if (!built) continue;
+    try {
+      const res = await fetchWithTimeout(built.url, {
+        method: 'GET',
+        headers: built.headers,
+        credentials: 'omit',
+        cache: 'no-store',
+      }, Math.max(cfg.timeout || 20000, 60000));
+      if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
+      const total = Number(res.headers.get('content-length') || 0);
+      if (!res.body || !res.body.getReader) {
+        const buf = await res.arrayBuffer();
+        if (opts.onProgress) opts.onProgress(buf.byteLength, buf.byteLength);
+        lastChannelUsed = ch;
+        return { blob: new Blob([buf]), channel: ch };
+      }
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (opts.onProgress) opts.onProgress(received, total);
+      }
+      lastChannelUsed = ch;
+      logLine(`✓ 下载[${ch}] ${fmtBytes(received)}`);
+      return { blob: new Blob(chunks), channel: ch };
+    } catch (e) {
+      lastErr = e;
+      logLine(`✗ 下载[${ch}] ${(e && e.message) || e}`);
+    }
+  }
+  throw lastErr || new Error('下载失败');
+}
+
+/* ======================= 8. 页面状态与渲染 ======================= */
+const S = {
+  parsing: false,
+  parseHint: '',
+  result: null,
+  descExpanded: false,
+  identity: { state: 'checking', nickname: '' },
+  cookiePanel: null,
+  manualCookie: '',
+  downloadedImages: {},
+  downloadingIndex: -1,
+  video: { busy: false, progress: 0, text: '', ready: false },
+  audio: { busy: false, text: '', ready: false, source: '', ext: 'mp3', name: '' },
+  mixAudio: { busy: false, ready: false },
+  mix: { videos: [], fetching: false, text: '', count: 0, dlIdx: -1, batch: { running: false, done: 0, idx: -1, text: '' } },
+  all: { downloading: false, saving: false, text: '' },
+  comments: {
+    list: [], shown: false, busy: false, text: '', search: '', sort: false, page: 0,
+    cursor: 0, hasMore: false, pages: '3', replies: {}, loading: {}, lastId: '',
+  },
+};
+
+/* ---- 二进制缓存（下载到内存，等待保存） ---- */
+const media = new Map();
+function putMedia(key, blob) {
+  clearMedia(key);
+  const url = URL.createObjectURL(blob);
+  const entry = { blob, url };
+  media.set(key, entry);
+  return entry;
+}
+const getMedia = (key) => media.get(key);
+function clearMedia(key) {
+  const m = media.get(key);
+  if (m) { URL.revokeObjectURL(m.url); media.delete(key); }
+}
+function clearAllMedia() {
+  for (const k of Array.from(media.keys())) clearMedia(k);
+}
+
+/* ---- 渲染：输入区状态 ---- */
+function paintHeader() {
+  const idBox = $('identityBox'), idTxt = $('identityText'), meta = $('cookieMeta');
+  const ck = cfg.cookie || '';
+  if (meta) {
+    meta.textContent = ck ? `· Cookie ${ck.length} 字符`
+      : ((cfg.guestCookie || '').trim() ? '· 游客 ttwid' : '');
+  }
+  if (idBox) idBox.classList.toggle('user', S.identity.state === 'user');
+  if (idTxt) {
+    if (S.identity.state === 'checking') {
+      idTxt.textContent = '当前身份：检测中…';
+    } else if (S.identity.state === 'user') {
+      idTxt.textContent = S.identity.nickname ? `当前身份：用户 · ${S.identity.nickname}` : '当前身份：用户（已登录）';
+    } else {
+      idTxt.textContent = '当前身份：游客';
+    }
+  }
+  updateChannelChip();
+}
+
+/* ---- 渲染：Cookie 面板 ---- */
+function paintCookiePanel() {
+  const box = $('cookiePanel');
+  if (!box) return;
+  const kind = S.cookiePanel;
+  if (!kind) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  if (kind === 'edit') {
+    box.innerHTML = `
+      <div class="divider"></div>
+      <div class="field">
+        <label>粘贴抖音 Cookie（整条 Cookie 请求头）</label>
+        <textarea class="input" id="manualCookie" data-input="manualCookie"
+          placeholder="sessionid=xxx; passport_csrf_token=xxx; ttwid=xxx; ...">${esc(S.manualCookie)}</textarea>
+        <div class="desc">浏览器 F12 → Network → 任意 douyin.com 请求 → Request Headers → 复制 Cookie 一整行。Cookie 只保存在本机浏览器，不会上传。</div>
+      </div>
+      <div class="row">
+        <button class="btn ok" data-act="cookie-save">保存</button>
+        <button class="btn" data-act="cookie-paste">读剪贴板</button>
+        <button class="btn ghost" data-act="cookie-view">查看当前</button>
+        <button class="btn ghost danger" data-act="cookie-clear">清除</button>
+        <button class="btn ghost" data-act="cookie-cancel">关闭</button>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>游客 ttwid（可选，未登录时提升解析成功率）</label>
+        <input class="input" id="guestCookie" data-input="guestCookie" value="${esc(cfg.guestCookie || '')}"
+          placeholder="只填 ttwid 的值即可，例如 7f1c9ab2...">
+        <div class="desc">在 douyin.com 页面控制台执行 <code>document.cookie</code>，复制其中的 <code>ttwid=...</code> 的值。</div>
+      </div>
+      <button class="btn tiny" data-act="guest-save">保存 ttwid</button>`;
+  } else if (kind === 'view') {
+    box.innerHTML = `
+      <div class="divider"></div>
+      <div class="field">
+        <label>当前 Cookie</label>
+        <textarea class="input" readonly>${esc(cfg.cookie || '（未设置）')}</textarea>
+      </div>
+      <div class="row">
+        <button class="btn tiny" data-act="cookie-copy">复制</button>
+        <button class="btn tiny ghost" data-act="cookie-edit">返回填写</button>
+        <button class="btn tiny ghost" data-act="cookie-cancel">关闭</button>
+      </div>`;
+  } else if (kind === 'help') {
+    box.innerHTML = `
+      <div class="divider"></div>
+      <div class="notice">
+        <b>网页版如何登录？</b><br>
+        1. 在电脑浏览器打开 <a href="https://www.douyin.com" target="_blank" rel="noopener">douyin.com</a> 并扫码登录；<br>
+        2. 按 <code>F12</code> → <b>Network</b> → 刷新页面 → 点任意一个 <code>douyin.com</code> 请求；<br>
+        3. 在 <b>Request Headers</b> 里找到 <code>Cookie</code>，右键 → Copy value；<br>
+        4. 回到本页「手动填写 Cookie」粘贴保存，再点「验证 Cookie」。
+        <div class="spacer"></div>
+        <span class="hint">也可以复制下面这行，在 douyin.com 的控制台（Console）里执行，它会自动把 Cookie 复制到剪贴板：</span>
+        <pre>copy(document.cookie)</pre>
+        <button class="btn tiny" data-act="copy-cookiejs">复制这段代码</button>
+        <div class="spacer"></div>
+        <span class="hint">提示：浏览器出于安全策略不允许网页直接设置 <code>Cookie</code> 请求头，因此登录态需要经「本站反代」通道透传（见设置页说明）。公共代理模式下只能用游客身份解析公开作品。</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <a class="btn" href="https://www.douyin.com" target="_blank" rel="noopener">打开抖音网页版</a>
+        <button class="btn ghost" data-act="cookie-cancel">关闭</button>
+      </div>`;
+  }
+}
+
+/* ---- 渲染：结果区 ---- */
+function typeLabel(r) {
+  if (r.type === 'video') return '视频';
+  if (r.type === 'live') return `实况图集 · ${r.liveVideos.length} 个视频`;
+  if (r.type === 'mix') return r.imageUrls.length ? `合集混剪 · ${r.imageUrls.length} 张画面` : '合集混剪';
+  return `图集 · ${r.imageUrls.length} 张图片`;
+}
+
+function renderInfo(r) {
+  const desc = r.description || '';
+  const showToggle = desc.length > 46;
+  const srcLabel = r.source === 'parseapi'
+    ? `第三方接口${r.sourceName ? ' · ' + r.sourceName : ''}`
+    : (r.source === 'official' && lastChannelUsed
+        ? '官方接口 · ' + (lastChannelUsed === 'edge' ? '本站反代' : lastChannelUsed === 'direct' ? '直连' : lastChannelUsed)
+        : '');
+  const metas = [];
+  if (r.type === 'video') {
+    metas.push(fmtDuration(r.duration));
+    if (r.width > 0) metas.push(r.width + '×' + r.height);
+  }
+  if (r.author) metas.push(r.author);
+  return `
+  <section class="card">
+    <div class="row-between" style="align-items:baseline">
+      <h3 style="margin:0;font-size:14px;font-weight:600">${esc(typeLabel(r))}${srcLabel ? `<span class="hint" style="margin-left:8px">${esc(srcLabel)}</span>` : ''}</h3>
+      <span class="mono">ID ${esc(r.videoId || '-')}</span>
+    </div>
+    ${desc ? `<div class="spacer"></div><div class="desc ${S.descExpanded ? '' : 'clamp'}">${esc(desc)}</div>` : ''}
+    ${metas.length ? `<div class="hint" style="margin-top:6px">${esc(metas.join(' · '))}</div>` : ''}
+    ${desc ? `<div class="row" style="margin-top:6px;gap:4px">
+        ${showToggle ? `<button class="btn mini ghost" data-act="toggle-desc">${S.descExpanded ? '收起' : '展开全文'}</button>` : ''}
+        <button class="btn mini ghost" data-act="copy-desc">复制文案</button>
+      </div>` : ''}
+    ${r.source === 'parseapi' ? `<div class="spacer"></div>
+      <div class="notice warn">基础解析模式：视频 / 图集 / 封面 / 背景音乐可下载；评论、合集、实况与登录需在设置中配置本站反代。</div>` : ''}
+  </section>`;
+}
+
+function renderActions(r) {
+  const count = (r.imageUrls.length || 0) +
+    (r.type === 'video' && r.videoUrl ? 1 : 0) +
+    (S.mix.videos.length && (r.type === 'mix' || r.type === 'live') ? S.mix.videos.length : 0);
+  return `
+  <section class="card">
+    <div class="row-between">
+      <span class="hint">共 ${count} 项内容</span>
+      <span class="hint" id="allProgress">${esc(S.all.text || '')}</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="row" style="gap:8px">
+      <button class="btn" data-act="dl-all" ${S.all.downloading || S.all.saving ? 'disabled' : ''} style="flex:1">
+        ${S.all.downloading ? '<span class="spin"></span>' : ''}${S.all.downloading ? '下载中…' : '下载全部'}
+      </button>
+      <button class="btn ok" data-act="save-all" ${S.all.downloading || S.all.saving ? 'disabled' : ''} style="flex:1">
+        ${S.all.saving ? '<span class="spin"></span>' : ''}${S.all.saving ? '保存中…' : '保存全部'}
+      </button>
+    </div>
+    <div class="hint" style="margin-top:8px">先下载到本地缓存，再保存到下载目录；手机浏览器可能弹出「下载文件」确认框。</div>
+  </section>`;
+}
+
+function renderVideo(r) {
+  if (r.type !== 'video' || !r.videoUrl) return '';
+  const v = S.video;
+  const ready = getMedia('video');
+  return `
+  <section class="card">
+    <div class="card-head"><h3>无水印视频</h3>${ready ? `<span class="hint">${fmtBytes(ready.blob.size)}</span>` : ''}</div>
+    ${v.busy ? `
+      <div class="progress"><i style="width:${clamp(v.progress, 0, 100)}%"></i></div>
+      <div class="hint" style="margin-top:6px">${v.progress}% · ${esc(v.text)}</div>
+    ` : (ready ? `
+      <div class="row" style="gap:8px">
+        <button class="btn ok" data-act="save-video" style="flex:1">保存视频</button>
+        <button class="btn ghost" data-act="dl-video">重新下载</button>
+        <a class="btn ghost" href="${esc(r.videoUrl)}" target="_blank" rel="noopener">预览</a>
+      </div>
+    ` : `
+      <div class="row" style="gap:8px">
+        <button class="btn primary" data-act="dl-video" style="flex:1">下载视频</button>
+        <a class="btn ghost" href="${esc(r.videoUrl)}" target="_blank" rel="noopener">预览</a>
+      </div>
+    `)}
+    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:nowrap">
+      <span class="mono ellipsis" style="flex:1">${esc((r.videoUrl || '').slice(0, 90))}</span>
+      <button class="btn mini ghost" data-act="copy-video-url">复制直链</button>
+    </div>
+  </section>`;
+}
+
+function renderAudio(r) {
+  if (!(r.musicUrl || r.musicTitle || r.videoUrl)) return '';
+  const a = S.audio;
+  const ready = getMedia('audio');
+  return `
+  <section class="card">
+    <div class="card-head">
+      <h3>音频</h3>
+      ${ready ? `<span class="hint">${fmtBytes(ready.blob.size)}</span>` : ''}
+    </div>
+    ${a.busy ? `
+      <div class="progress indet"><i></i></div>
+      <div class="hint" style="margin-top:6px">${esc(a.text || '处理中…')}</div>
+    ` : `
+      <div class="row" style="gap:8px">
+        <button class="btn ${ready ? 'ghost' : 'primary'}" data-act="dl-track" style="flex:1">${ready ? '重新下载' : '下载音频'}</button>
+        <button class="btn ok" data-act="save-track" style="flex:1" ${ready ? '' : 'disabled'}>保存音频</button>
+      </div>
+      <div class="hint" style="margin-top:8px">${esc(a.source ? '来源：' + a.source + ' · ' + (a.name || '') : '优先使用官方背景音乐直链，没有则从视频中提取音轨')}</div>
+    `}
+  </section>`;
+}
+
+function renderMixAudio(r) {
+  if (!(r.type === 'mix' && r.audioUrl)) return '';
+  const ready = getMedia('mixaudio');
+  return `
+  <section class="card">
+    <div class="card-head"><h3>合集音频轨</h3>${ready ? `<span class="hint">${fmtBytes(ready.blob.size)}</span>` : ''}</div>
+    ${S.mixAudio.busy ? `
+      <div class="progress indet"><i></i></div><div class="hint" style="margin-top:6px">正在下载…</div>
+    ` : `
+      <div class="row" style="gap:8px">
+        <button class="btn ${ready ? 'ghost' : 'primary'}" data-act="dl-mixaudio" style="flex:1">${ready ? '重新下载' : '下载音频轨'}</button>
+        <button class="btn ok" data-act="save-mixaudio" style="flex:1" ${ready ? '' : 'disabled'}>保存</button>
+      </div>
+    `}
+  </section>`;
+}
+
+function renderMix(r) {
+  if (!(r.type === 'mix' || r.type === 'live')) return '';
+  const m = S.mix;
+  if (!m.videos.length) {
+    if (r.type === 'live') return '';
+    const hasCookie = !!effectiveCookie();
+    return `
+    <section class="card">
+      <div class="card-head"><h3>独立视频列表</h3></div>
+      ${m.fetching ? `
+        <div class="progress indet"><i></i></div><div class="hint" style="margin-top:6px">${esc(m.text || '正在获取…')}</div>
+      ` : (!hasCookie ? `
+        <div class="notice warn">合集内的独立视频需要登录后获取。请先在「手动填写 Cookie」中填入登录态 Cookie（并确保接口通道支持透传 Cookie）。</div>
+        <div class="spacer"></div>
+        <button class="btn" data-act="cookie-edit" style="width:100%">去填写 Cookie</button>
+      ` : `
+        <button class="btn" data-act="fetch-mix" style="width:100%">获取独立视频列表</button>
+      `)}
+    </section>`;
+  }
+  const b = m.batch;
+  return `
+  <section class="card">
+    <div class="card-head">
+      <h3>共 ${m.videos.length} 个视频</h3>
+      ${b.running ? `<span class="tag accent">${esc(b.text)}</span>` : ''}
+    </div>
+    ${m.fetching ? `<div class="progress indet"><i></i></div><div class="hint">${esc(m.text)}</div><div class="spacer"></div>` : ''}
+    ${b.running ? `
+      <div class="progress"><i style="width:${m.videos.length ? (b.done / m.videos.length) * 100 : 0}%"></i></div>
+      <div class="hint" style="margin-top:6px">正在下载：${b.done} / ${m.videos.length}</div>
+    ` : `
+      <button class="btn" data-act="dl-mix-all" style="width:100%" ${m.fetching ? 'disabled' : ''}>
+        ⬇ 下载全部 ${m.videos.length} 个视频
+      </button>
+    `}
+  </section>
+  <section class="card">
+    ${m.videos.map((mv, i) => renderMixItem(mv, i)).join('<div class="divider"></div>')}
+  </section>`;
+}
+
+function renderMixItem(mv, i) {
+  const m = S.mix, b = m.batch;
+  const ready = getMedia('mix' + i);
+  let ops;
+  if (b.running) {
+    if (b.idx > i) ops = '<span class="cmeta">✓ 已下载</span>';
+    else if (b.idx === i) ops = '<div class="progress indet"><i></i></div>';
+    else ops = '<span class="cmeta">等待中…</span>';
+  } else if (m.dlIdx === i) {
+    ops = '<div class="progress indet"><i></i></div>';
+  } else if (ready) {
+    ops = `<div class="row" style="gap:6px">
+      <button class="btn tiny ok" data-act="save-mix-item" data-i="${i}">保存</button>
+      <button class="btn tiny ghost" data-act="dl-mix-item" data-i="${i}">重新下载</button>
+      <span class="hint">${fmtBytes(ready.blob.size)}</span>
+    </div>`;
+  } else {
+    ops = `<button class="btn tiny" data-act="dl-mix-item" data-i="${i}">下载视频</button>`;
+  }
+  return `
+  <div class="vitem">
+    <div class="num">${i + 1}</div>
+    <div class="grow">
+      <div class="ellipsis" style="font-size:13px">${esc(mv.desc || ('视频 ' + (i + 1)))}</div>
+      <div class="meta">${mv.duration ? Math.round(mv.duration / 1000) + 's' : ''} ${mv.width ? mv.width + '×' + mv.height : ''}</div>
+      <div style="margin-top:6px">${ops}</div>
+    </div>
+  </div>`;
+}
+
+function renderImages(r) {
+  const urls = r.imageUrls || [];
+  if (!urls.length || !['note', 'mix', 'live'].includes(r.type)) return '';
+  return `
+  <section class="card">
+    <div class="card-head"><h3>${r.type === 'live' ? '实况图片' : '图片'} · 共 ${urls.length} 张</h3>
+      <button class="btn mini ghost" data-act="dl-all-images">全部下载</button>
+    </div>
+    <div class="grid">
+      ${urls.map((u, i) => {
+        const got = getMedia('img' + i);
+        return `
+        <div class="media">
+          <img src="${esc(u)}" loading="lazy" alt="第 ${i + 1} 张" data-act="view-img" data-url="${esc(u)}" data-name="第 ${i + 1} 张">
+          <span class="idx">${i + 1}${got ? ' ✓' : ''}</span>
+          <div class="ops">
+            ${got
+              ? `<button class="btn" data-act="save-img" data-i="${i}">保存</button>`
+              : `<button class="btn" data-act="dl-img" data-i="${i}">${S.downloadingIndex === i ? '下载中…' : '下载'}</button>`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function renderCommentsCard(r) {
+  const c = S.comments;
+  const id = r.videoId;
+  if (r.source === 'parseapi') {
+    return `
+    <section class="card">
+      <div class="card-head"><h3>评论</h3></div>
+      <div class="notice">
+        评论区走抖音官方接口并需要登录 Cookie。请按「设置 → 部署说明」配置一条本站反代规则（在腾讯云 EdgeOne 上 3 分钟即可完成），
+        配好后刷新页面即可使用评论、合集、实况与登录身份等完整功能。
+      </div>
+    </section>`;
+  }
+  const head = `
+    <div class="card-head">
+      <h3>评论${c.list.length ? `<span class="badge">${c.list.length}</span>` : ''}</h3>
+      <button class="btn tiny" data-act="comments-toggle" ${c.busy ? 'disabled' : ''}>
+        ${c.busy ? '获取中…' : (c.shown ? '隐藏评论' : '查看评论')}
+      </button>
+    </div>`;
+  if (!c.shown) return `<section class="card">${head}${c.busy ? `<div class="hint">${esc(c.text || '正在获取评论…')}</div>` : ''}</section>`;
+  if (c.busy && !c.list.length) return `<section class="card">${head}<div class="progress indet"><i></i></div><div class="hint" style="margin-top:6px">${esc(c.text || '正在获取评论…')}</div></section>`;
+  if (!c.list.length) return `<section class="card">${head}<div class="hint">暂无评论</div></section>`;
+
+  let list = c.list;
+  const q = c.search.trim();
+  if (q) list = list.filter((x) => (x.nickname || '').toLowerCase().includes(q.toLowerCase()) ||
+    (x.text || '').toLowerCase().includes(q.toLowerCase()));
+  if (c.sort) list = list.slice().sort((a, b) => b.diggCount - a.diggCount);
+  const pageSize = 100;
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  if (c.page >= totalPages) c.page = totalPages - 1;
+  const pageList = list.slice(c.page * pageSize, c.page * pageSize + pageSize);
+
+  return `
+  <section class="card">
+    ${head}
+    <div class="field">
+      <input class="input" id="commentSearch" data-input="commentSearch" value="${esc(c.search)}"
+        placeholder="搜索评论：@用户 或 关键词" autocomplete="off">
+    </div>
+    <div class="row-between">
+      <div class="row">
+        <span class="hint">每次加载</span>
+        <input class="input" style="width:64px;padding:6px 8px;text-align:center" data-input="commentPages" value="${esc(c.pages)}">
+        <span class="hint">页（${(parseInt(c.pages, 10) || 3) * 20} 条）</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" data-input="commentSort" ${c.sort ? 'checked' : ''}><span class="track"></span>按点赞排序
+      </label>
+    </div>
+    <div class="divider"></div>
+    ${q && !list.length ? `<div class="notice">未找到匹配「${esc(q)}」的评论</div>` : ''}
+    ${totalPages > 1 ? `
+      <div class="pager">
+        <span class="hint">第 ${c.page + 1}/${totalPages} 页 · 显示 ${c.page * pageSize + 1}-${Math.min((c.page + 1) * pageSize, list.length)} 条（共 ${list.length} 条）</span>
+        <span class="row">
+          <button class="btn mini" data-act="cpage-first" ${c.page === 0 ? 'disabled' : ''}>首页</button>
+          <button class="btn mini" data-act="cpage-prev" ${c.page === 0 ? 'disabled' : ''}>上一页</button>
+          <button class="btn mini" data-act="cpage-next" ${c.page >= totalPages - 1 ? 'disabled' : ''}>下一页</button>
+          <button class="btn mini" data-act="cpage-last" ${c.page >= totalPages - 1 ? 'disabled' : ''}>末页</button>
+        </span>
+      </div>` : (q ? `<div class="hint">${list.length}/${c.list.length} 条</div>` : '')}
+    ${pageList.map((cm, i) => renderComment(cm, i, false, id)).join('')}
+    ${c.hasMore && !q ? `
+      <div class="spacer"></div>
+      <button class="btn" data-act="comments-more" style="width:100%" ${c.busy ? 'disabled' : ''}>
+        ${c.busy ? esc(c.text || '加载中…') : `加载更多评论（已获取 ${c.list.length} 条）`}
+      </button>` : ''}
+  </section>`;
+}
+
+function renderComment(cm, i, isReply, awemeId) {
+  const replies = S.comments.replies[cm.cid];
+  const loading = S.comments.loading[cm.cid];
+  const imgs = (cm.imageUrls || []).concat(cm.stickerUrl ? [cm.stickerUrl] : []);
+  return `
+  <div class="comment" ${isReply ? '' : `data-cidx="${i}"`}>
+    <div class="row-between">
+      <span class="cname" style="${isReply ? 'font-size:12px;color:var(--text-2)' : ''}">${esc(cm.nickname || '用户')}</span>
+      <span class="row">
+        ${cm.diggCount > 0 ? `<span class="cmeta">${cm.diggCount} 赞</span>` : ''}
+        ${cm.createTime && !isReply ? `<span class="cmeta">${esc(fmtTime(cm.createTime))}</span>` : ''}
+        <button class="btn mini ghost" data-act="copy-comment" data-text="${esc(cm.text)}">复制</button>
+      </span>
+    </div>
+    ${cm.text ? `<div class="ctext">${esc(cm.text)}</div>` : ''}
+    ${(cm.emoticonUrls || []).length ? `<div class="cimgs">${cm.emoticonUrls.map((u) => `<img class="emoji" src="${esc(u)}" loading="lazy" alt="表情">`).join('')}</div>` : ''}
+    ${imgs.length ? `
+      <div class="cimgs">
+        ${imgs.map((u) => {
+          const got = getMedia('cimg:' + u);
+          return `
+          <div class="cimg">
+            <img src="${esc(u)}" loading="lazy" alt="评论图片" data-act="view-img" data-url="${esc(u)}" data-name="评论图片">
+            ${got
+              ? `<button class="btn" data-act="save-cimg" data-url="${esc(u)}">保存</button>`
+              : `<button class="btn" data-act="dl-cimg" data-url="${esc(u)}">下载</button>`}
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    ${!isReply ? `
+      <div style="margin-top:4px">
+        ${replies == null && !loading
+          ? `<button class="btn mini ghost" data-act="reply" data-cid="${esc(cm.cid)}" data-aweme="${esc(awemeId)}">查看回复</button>`
+          : (loading ? `<span class="cmeta"><span class="spin"></span> 加载中…</span>` : '')}
+      </div>
+      ${(replies && replies.length) ? `<div class="reply">${replies.map((rp, k) => renderComment(rp, k, true, awemeId)).join('')}</div>` : ''}
+      ${(replies && !replies.length) ? '<div class="cmeta" style="margin-left:14px">没有更多回复</div>' : ''}
+    ` : ''}
+  </div>`;
+}
+
+function renderResult() {
+  const area = $('resultArea');
+  if (!area) return;
+  if (S.parsing) {
+    area.innerHTML = `
+      <section class="card">
+        <div class="progress indet"><i></i></div>
+        <div class="hint" style="margin-top:10px">${esc(S.parseHint || '正在解析作品数据…')}</div>
+      </section>`;
+    return;
+  }
+  const r = S.result;
+  if (!r) {
+    area.innerHTML = `
+      <section class="card"><div class="empty">
+        <span class="big">🎬</span>
+        粘贴抖音分享链接后点「解析链接」<br>
+        <span class="hint">支持无水印视频、图集、实况图集、合集混剪、评论</span>
+      </div></section>`;
+    return;
+  }
+  if (r.error) {
+    area.innerHTML = `
+      <section class="card">
+        <div class="card-head"><h3 style="color:var(--err)">解析失败</h3></div>
+        <div class="notice err">${esc(r.error)}</div>
+        <div class="spacer"></div>
+        <div class="notice">
+          <b>排查建议</b><br>
+          1. 打开右上角「设置 → 接口通道」，点「通道自检」看哪个通道可用；<br>
+          2. 若使用 GitHub Pages 直连，浏览器跨域限制会导致抖音接口不可用，建议按设置页说明配置一条本站反代规则；<br>
+          3. 部分作品（合集、评论、私密作品）需要登录 Cookie。
+        </div>
+      </section>`;
+    return;
+  }
+  area.innerHTML = [
+    renderInfo(r),
+    renderActions(r),
+    renderCommentsCard(r),
+    renderVideo(r),
+    renderAudio(r),
+    renderMixAudio(r),
+    renderMix(r),
+    renderImages(r),
+    '<div style="height:8px"></div>',
+  ].join('');
+}
+
+/* ---- 统一渲染入口（逐帧合并，避免输入框失焦） ---- */
+let paintPending = false;
+function paint() {
+  if (paintPending) return;
+  paintPending = true;
+  requestAnimationFrame(() => {
+    paintPending = false;
+    const focus = captureFocus();
+    paintHeader();
+    paintCookiePanel();
+    renderResult();
+    restoreFocus(focus);
+  });
+}
+function captureFocus() {
+  const el = document.activeElement;
+  if (!el || !el.dataset || !el.dataset.input) return null;
+  return { key: el.dataset.input, start: el.selectionStart, end: el.selectionEnd };
+}
+function restoreFocus(f) {
+  if (!f) return;
+  const el = document.querySelector('[data-input="' + f.key + '"]');
+  if (!el) return;
+  try {
+    el.focus();
+    if (f.start != null) el.setSelectionRange(f.start, f.end);
+  } catch (_) {}
+}
+
+/* ======================= 9. 业务动作 ======================= */
+function audioSaveName(r) {
+  const raw = (r.musicTitle && r.musicAuthor)
+    ? `${r.musicTitle} - ${r.musicAuthor}`
+    : (r.musicTitle || r.videoId || String(nowMs()));
+  return safeName(raw, r.videoId);
+}
+
+/** 视频/音频字节 → WAV（浏览器本地提取音轨，对应 Android 端 MediaMuxer 提取） */
+async function extractAudioWav(arrayBuffer) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  const ctx = new AC();
+  try {
+    const audio = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    const ch = Math.min(2, audio.numberOfChannels);
+    const len = audio.length, sr = audio.sampleRate;
+    const bytes = 44 + len * ch * 2;
+    const ab = new ArrayBuffer(bytes);
+    const dv = new DataView(ab);
+    const ws = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); dv.setUint32(4, bytes - 8, true); ws(8, 'WAVE');
+    ws(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+    dv.setUint16(22, ch, true); dv.setUint32(24, sr, true);
+    dv.setUint32(28, sr * ch * 2, true); dv.setUint16(32, ch * 2, true);
+    dv.setUint16(34, 16, true);
+    ws(36, 'data'); dv.setUint32(40, len * ch * 2, true);
+    const chans = [];
+    for (let c = 0; c < ch; c++) chans.push(audio.getChannelData(c));
+    let off = 44;
+    for (let i = 0; i < len; i++) {
+      for (let c = 0; c < ch; c++) {
+        const s = Math.max(-1, Math.min(1, chans[c][i]));
+        dv.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        off += 2;
+      }
+    }
+    return ab;
+  } catch (e) {
+    logLine('音轨解码失败: ' + ((e && e.message) || e));
+    return null;
+  } finally {
+    try { ctx.close(); } catch (_) {}
+  }
+}
+
+function resetForNewParse() {
+  clearAllMedia();
+  S.result = null;
+  S.descExpanded = false;
+  S.downloadingIndex = -1;
+  S.video = { busy: false, progress: 0, text: '', ready: false };
+  S.audio = { busy: false, text: '', ready: false, source: '', ext: 'mp3', name: '' };
+  S.mixAudio = { busy: false, ready: false };
+  S.mix = { videos: [], fetching: false, text: '', count: 0, dlIdx: -1, batch: { running: false, done: 0, idx: -1, text: '' } };
+  const keep = { sort: S.comments.sort, pages: S.comments.pages };
+  S.comments = Object.assign({
+    list: [], shown: false, busy: false, text: '', search: '', page: 0,
+    cursor: 0, hasMore: false, replies: {}, loading: {}, lastId: '',
+  }, keep);
+}
+
+async function parseUrl() {
+  const input = $('shareUrl');
+  const raw = (input && input.value || '').trim();
+  if (!raw) { toast('请先输入抖音分享链接', 'err'); return; }
+  resetForNewParse();
+  S.parsing = true;
+  S.parseHint = '正在解析作品数据…';
+  paint();
+  let r;
+  try {
+    r = await DouyinParser.parse(raw, effectiveCookie());
+  } catch (e) {
+    r = { type: '', videoId: '', description: '', imageUrls: [], liveVideos: [], error: '解析异常: ' + ((e && e.message) || e) };
+  }
+  S.parsing = false;
+  S.parseHint = '';
+  S.result = r;
+  if (r.error) {
+    toast(r.error, 'err');
+  } else {
+    if (r.type === 'live') S.mix.videos = r.liveVideos.slice();
+    toast('解析完成：' + typeLabel(r), 'ok');
+  }
+  paint();
+  if (!r.error && r.type === 'mix' && effectiveCookie()) fetchMix(r.videoId);
+}
+
+async function fetchMix(noteId) {
+  if (!noteId) return;
+  S.mix.fetching = true;
+  S.mix.text = '正在获取…';
+  paint();
+  const { videos, error } = await DouyinParser.fetchAllMix(noteId, effectiveCookie(), (n) => {
+    S.mix.text = `已获取 ${n} 个视频…`;
+    paint();
+  });
+  S.mix.videos = videos;
+  S.mix.fetching = false;
+  S.mix.text = '';
+  if (!videos.length && error) toast(error, 'err');
+  else if (videos.length) toast(`获取到 ${videos.length} 个视频`, 'ok');
+  paint();
+}
+
+async function downloadVideoFile(r) {
+  S.video.busy = true;
+  S.video.progress = 0;
+  S.video.text = '';
+  clearMedia('video');
+  paint();
+  try {
+    const { blob } = await downloadBinary(r.videoUrl, {
+      onProgress: (rec, total) => {
+        S.video.progress = total ? Math.round(rec * 100 / total) : 0;
+        S.video.text = `${fmtBytes(rec)} / ${total ? fmtBytes(total) : '?'}`;
+        paint();
+      },
+    });
+    putMedia('video', blob);
+    toast('视频下载完成：' + fmtBytes(blob.size), 'ok');
+  } catch (e) {
+    toast('视频下载失败：' + ((e && e.message) || e) + '（可点「预览」用浏览器直接播放/另存）', 'err');
+  } finally {
+    S.video.busy = false;
+    paint();
+  }
+}
+
+async function downloadImageAt(i) {
+  const r = S.result;
+  const url = r.imageUrls[i];
+  if (!url) return;
+  S.downloadingIndex = i;
+  paint();
+  try {
+    const { blob } = await downloadBinary(url, {});
+    putMedia('img' + i, blob);
+  } catch (e) {
+    toast(`第 ${i + 1} 张下载失败：` + ((e && e.message) || e), 'err');
+  }
+  S.downloadingIndex = -1;
+  paint();
+}
+
+async function downloadAllImages() {
+  const r = S.result;
+  if (!r) return;
+  for (let i = 0; i < r.imageUrls.length; i++) {
+    if (getMedia('img' + i)) continue;
+    await downloadImageAt(i);
+  }
+  toast('图片已全部下载到缓存', 'ok');
+}
+
+async function downloadAudioTrack(r) {
+  if (S.audio.busy) return;
+  S.audio.busy = true;
+  S.audio.text = '';
+  paint();
+  try {
+    // 1) 官方背景音乐直链
+    if (r.musicUrl) {
+      S.audio.text = '正在下载背景音乐…';
+      paint();
+      try {
+        const { blob } = await downloadBinary(r.musicUrl, {
+          onProgress: (rec, total) => {
+            S.audio.text = `背景音乐 ${fmtBytes(rec)}${total ? ' / ' + fmtBytes(total) : ''}`;
+            paint();
+          },
+        });
+        const ext = /\.m4a(\?|$)/i.test(r.musicUrl) ? 'm4a' : 'mp3';
+        putMedia('audio', blob);
+        S.audio.source = '背景音乐';
+        S.audio.ext = ext;
+        S.audio.name = audioSaveName(r) + '.' + ext;
+        toast('背景音乐下载完成，可保存音频', 'ok');
+        return;
+      } catch (e) {
+        logLine('背景音乐直链失败: ' + ((e && e.message) || e));
+      }
+    }
+    // 2) 从视频提取音轨
+    let vb = getMedia('video') && getMedia('video').blob;
+    if (!vb && r.videoUrl) {
+      const { blob } = await downloadBinary(r.videoUrl, {
+        onProgress: (rec, total) => {
+          S.audio.text = `正在下载视频（提取音频用）${fmtBytes(rec)}${total ? ' / ' + fmtBytes(total) : ''}`;
+          paint();
+        },
+      });
+      vb = blob;
+      putMedia('video', blob);
+    }
+    if (!vb) throw new Error('没有可用的视频源');
+    S.audio.text = '正在提取音轨…';
+    paint();
+    const wav = await extractAudioWav(await vb.arrayBuffer());
+    if (!wav) throw new Error('音轨提取失败（浏览器无法解码该视频音轨）');
+    putMedia('audio', new Blob([wav], { type: 'audio/wav' }));
+    S.audio.source = '视频音轨';
+    S.audio.ext = 'wav';
+    S.audio.name = audioSaveName(r) + '.wav';
+    toast('音频提取完成，可保存音频', 'ok');
+  } catch (e) {
+    toast('音频处理失败：' + ((e && e.message) || e), 'err');
+  } finally {
+    S.audio.busy = false;
+    S.audio.text = '';
+    paint();
+  }
+}
+
+async function downloadAllItems(r) {
+  if (S.all.downloading) return;
+  S.all.downloading = true;
+  let ok = 0, fail = 0;
+  paint();
+  try {
+    if (r.type === 'video' && r.videoUrl) {
+      if (getMedia('video')) ok++;
+      else {
+        S.all.text = '正在下载视频…';
+        paint();
+        try {
+          const { blob } = await downloadBinary(r.videoUrl, {
+            onProgress: (rec, total) => {
+              S.all.text = `视频 ${fmtBytes(rec)}${total ? ' / ' + fmtBytes(total) : ''}`;
+              paint();
+            },
+          });
+          putMedia('video', blob); ok++;
+        } catch (e) { fail++; logLine('批量-视频失败: ' + ((e && e.message) || e)); }
+      }
+    }
+    for (let i = 0; i < r.imageUrls.length; i++) {
+      if (getMedia('img' + i)) { ok++; continue; }
+      S.all.text = `正在下载图片 ${i + 1}/${r.imageUrls.length}…`;
+      paint();
+      try {
+        const { blob } = await downloadBinary(r.imageUrls[i], {});
+        putMedia('img' + i, blob); ok++;
+      } catch (e) { fail++; logLine('批量-图片失败: ' + ((e && e.message) || e)); }
+    }
+    if ((r.type === 'mix' || r.type === 'live') && S.mix.videos.length) {
+      for (let i = 0; i < S.mix.videos.length; i++) {
+        const mv = S.mix.videos[i];
+        if (getMedia('mix' + i)) { ok++; continue; }
+        if (!mv.videoUrl) continue;
+        S.all.text = `正在下载视频 ${i + 1}/${S.mix.videos.length}…`;
+        paint();
+        try {
+          const { blob } = await downloadBinary(mv.videoUrl, {});
+          putMedia('mix' + i, blob); ok++;
+        } catch (e) { fail++; logLine('批量-合集视频失败: ' + ((e && e.message) || e)); }
+      }
+    }
+    if (!r.imageUrls.length && !(r.type === 'video' && r.videoUrl) && !S.mix.videos.length) {
+      toast('该作品没有可下载的内容', 'err');
+    } else {
+      toast(fail === 0
+        ? `已下载 ${ok} 项，可点「一键保存全部」`
+        : `已下载 ${ok} 项，${fail} 项失败（可查看设置页日志）`, fail ? 'err' : 'ok');
+    }
+  } finally {
+    S.all.downloading = false;
+    S.all.text = '';
+    paint();
+  }
+}
+
+async function saveAllItems(r) {
+  const items = [];
+  const id = r.videoId || String(nowMs());
+  (r.imageUrls || []).forEach((u, i) => {
+    const m = getMedia('img' + i);
+    if (m) items.push({ name: `douyin_${id}_${String(i + 1).padStart(2, '0')}.${extFromUrl(u)}`, blob: m.blob });
+  });
+  const v = getMedia('video');
+  if (v) items.push({ name: `douyin_${id}.mp4`, blob: v.blob });
+  S.mix.videos.forEach((mv, i) => {
+    const m = getMedia('mix' + i);
+    if (m) items.push({ name: `douyin_${mv.awemeId || (id + '_' + (i + 1))}.mp4`, blob: m.blob });
+  });
+  if (!items.length) { toast('还没有已下载的内容，请先点「一键下载全部」', 'err'); return; }
+  S.all.saving = true;
+  let done = 0;
+  try {
+    for (const it of items) {
+      S.all.text = `正在保存 ${done + 1}/${items.length}…`;
+      paint();
+      saveBlobAs(it.name, it.blob);
+      done++;
+      await sleep(320);
+    }
+    toast(`已保存 ${done} 个文件（浏览器可能询问是否允许下载多个文件）`, 'ok');
+  } catch (e) {
+    toast('保存失败：' + ((e && e.message) || e), 'err');
+  } finally {
+    S.all.saving = false;
+    S.all.text = '';
+    paint();
+  }
+}
+
+async function loadComments(loadMore) {
+  const r = S.result;
+  if (!r || !r.videoId) { toast('缺少作品 ID，无法获取评论', 'err'); return; }
+  const c = S.comments;
+  c.busy = true;
+  if (!loadMore) { c.list = []; c.cursor = 0; c.page = 0; c.replies = {}; }
+  c.shown = true;
+  c.text = '正在获取评论…';
+  paint();
+  const pages = clamp(parseInt(c.pages, 10) || 3, 1, 20);
+  const res = await DouyinParser.fetchComments(r.videoId, effectiveCookie(), c.cursor, pages, (n) => {
+    c.text = `已获取 ${n} 条评论…`;
+    paint();
+  });
+  c.list = loadMore ? c.list.concat(res.comments) : res.comments;
+  c.hasMore = !!res.hasMore;
+  c.cursor = res.nextCursor || c.cursor;
+  c.busy = false;
+  c.text = '';
+  if (!c.list.length && res.error) toast(res.error + '（评论区通常需要登录 Cookie）', 'err');
+  else if (loadMore) toast(`已加载 ${c.list.length} 条评论`, 'ok');
+  paint();
+}
+
+async function loadReplies(cid, awemeId) {
+  const c = S.comments;
+  c.loading[cid] = true;
+  paint();
+  const res = await DouyinParser.fetchReplies(awemeId || (S.result && S.result.videoId), cid, effectiveCookie(), 0, 3);
+  c.replies[cid] = res.comments || [];
+  delete c.loading[cid];
+  if (res.error) toast(res.error, 'err');
+  paint();
+}
+
+async function downloadCommentImage(url) {
+  try {
+    const { blob } = await downloadBinary(url, {});
+    putMedia('cimg:' + url, blob);
+    toast('已下载，可点「保存」', 'ok');
+  } catch (e) {
+    toast('图片下载失败：' + ((e && e.message) || e), 'err');
+  }
+  paint();
+}
+
+async function refreshIdentity() {
+  const ck = effectiveCookie();
+  if (!ck) { S.identity = { state: 'guest', nickname: '' }; paint(); return; }
+  S.identity = { state: 'checking', nickname: '' };
+  paint();
+  const r = await DouyinParser.fetchIdentity(ck);
+  S.identity = r.loggedIn
+    ? { state: 'user', nickname: r.nickname || '' }
+    : { state: 'guest', nickname: '' };
+  paint();
+}
+
+/* ======================= 10. 设置面板 / 部署说明 ======================= */
+const EDGE_RULE_TEXT =
+`腾讯云 EdgeOne「规则引擎」— 路径回源（按需添加，配好后本页会自动启用「本站反代」通道）：
+
+①  /dyapi/*      回源 https://www.douyin.com       路径改写：/dyapi/     → /
+②  /dyapi-ies/*  回源 https://www.iesdouyin.com    路径改写：/dyapi-ies/ → /
+③  /dyapi-v/*    回源 https://v.douyin.com         路径改写：/dyapi-v/   → /
+
+登录态透传（想让「评论 / 合集 / 验证 Cookie」可用，在 ① 规则中再加一条请求头改写）：
+   请求头 Cookie = \${http.request.headers["x-dy-cookie"]}
+
+说明：浏览器安全策略禁止网页直接设置 Cookie 请求头，所以登录态只能靠边缘规则把
+本页发送的自定义头 X-Dy-Cookie 映射成 Cookie。不配也能用，只是保持「游客」身份。`;
+
+function settingsHtml() {
+  const chans = [
+    ['auto', '自动（依次尝试可用通道）'],
+    ['edge', '本站反代前缀（同源 · 可透传 Cookie · 推荐）'],
+    ['direct', '直连（不使用任何代理）'],
+    ['custom', '自定义代理模板'],
+    ['parseapi', '第三方解析接口（国内可直连 · 仅基础解析）'],
+  ].concat(PUBLIC_PROXIES.map((p) => [p.id, '公共代理 · ' + p.name]));
+  return `
+  <div class="modal-head">
+    <h3>设置</h3>
+    <button class="btn tiny ghost" data-act="modal-close">关闭</button>
+  </div>
+
+  <div class="notice">
+    本页面是纯静态单文件，放在 GitHub Pages 即可运行。<br>
+    <b>开箱可用</b>：第三方的解析接口在国内可直连，能解析并下载无水印视频 / 图集 / 封面 / 背景音乐。<br>
+    <b>完整功能</b>（评论、合集混剪、实况图集、登录 Cookie）走抖音官方接口，需要按下文加一条本站反代规则（浏览器不允许网页直接跨域调用抖音接口，也无法自行设置 Cookie）。
+  </div>
+
+  <div class="field">
+    <label>接口通道</label>
+    <select class="input" id="cfgChannel" data-input="cfgChannel">
+      ${chans.map(([v, n]) => `<option value="${v}" ${cfg.channel === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+    </select>
+  </div>
+
+  <div class="field">
+    <label>本站反代前缀</label>
+    <div class="row">
+      <input class="input" data-input="cfgDy" id="cfgDy" value="${esc(cfg.dyPrefix)}" placeholder="/dyapi" style="flex:1;min-width:120px">
+      <input class="input" data-input="cfgIes" id="cfgIes" value="${esc(cfg.iesPrefix)}" placeholder="/dyapi-ies" style="flex:1;min-width:120px">
+      <input class="input" data-input="cfgV" id="cfgV" value="${esc(cfg.vPrefix)}" placeholder="/dyapi-v" style="flex:1;min-width:120px">
+    </div>
+    <div class="desc">依次对应 www.douyin.com / www.iesdouyin.com / v.douyin.com 三个回源前缀。</div>
+  </div>
+
+  <div class="field">
+    <label>Cookie / UA 透传方式</label>
+    <select class="input" id="cfgCookieMode" data-input="cfgCookieMode">
+      <option value="header" ${cfg.cookieMode === 'header' ? 'selected' : ''}>请求头 X-Dy-Cookie（推荐）</option>
+      <option value="query" ${cfg.cookieMode === 'query' ? 'selected' : ''}>查询参数 __dyck（部分环境更兼容）</option>
+    </select>
+    <div class="desc">浏览器不允许网页直接设置 Cookie 头，需要边缘规则把这里发出的值映射回 Cookie。</div>
+  </div>
+
+  <div class="field">
+    <label>自定义代理模板</label>
+    <input class="input" id="cfgCustom" data-input="cfgCustom" value="${esc(cfg.customTpl)}"
+      placeholder="https://your-proxy.example.com/?url={url}">
+    <div class="desc">使用 <code>{url}</code> 占位符；不写占位符则直接把目标地址拼在后面。</div>
+  </div>
+
+  <div class="field">
+    <label>自动模式下启用的公共代理（按顺序尝试）</label>
+    <div class="row">
+      ${PUBLIC_PROXIES.map((p) => `
+        <label class="switch"><input type="checkbox" class="cfgProxy" value="${p.id}"
+          ${cfg.proxies.includes(p.id) ? 'checked' : ''}><span class="track"></span>${esc(p.name)}</label>`).join('')}
+    </div>
+    <div class="desc">公共代理无法自定义请求头（会触发浏览器预检），因此只能用于公开作品的解析与下载。</div>
+  </div>
+
+  <div class="field">
+    <label>第三方解析接口（兜底通道，按顺序尝试）</label>
+    <div class="row">
+      ${PARSE_APIS.map((p) => `
+        <label class="switch"><input type="checkbox" class="cfgParseApi" value="${p.id}"
+          ${cfg.parseApis.includes(p.id) ? 'checked' : ''}><span class="track"></span>${esc(p.name)}</label>`).join('')}
+    </div>
+    <div class="desc">
+      没有自建反代时的首选：国内网络可直连、自带跨域，能解析无水印视频 / 图集 / 封面 / 背景音乐。
+      手机实测：直连抖音接口会被浏览器跨域拦截，公共代理在境内基本不可用，只有这类接口可用。
+    </div>
+  </div>
+
+  <div class="field">
+    <label>请求超时（毫秒）</label>
+    <input class="input" id="cfgTimeout" data-input="cfgTimeout" value="${esc(cfg.timeout)}">
+  </div>
+
+  <details>
+    <summary class="hint" style="cursor:pointer">高级：请求 User-Agent（需与 A-Bogus 签名一致）</summary>
+    <div class="field" style="margin-top:8px">
+      <input class="input" id="cfgUa" data-input="cfgUa" value="${esc(cfg.ua)}">
+    </div>
+  </details>
+
+  <div class="row" style="margin-top:12px">
+    <button class="btn primary" data-act="cfg-save">保存并应用</button>
+    <button class="btn" data-act="cfg-test">通道自检</button>
+    <button class="btn danger" data-act="cfg-reset">清空本地数据</button>
+  </div>
+
+  <div class="divider"></div>
+  <label class="hint">通道自检结果</label>
+  <pre id="testResult">点击「通道自检」开始检测（会向抖音分享页发一次请求）</pre>
+
+  <div class="divider"></div>
+  <div class="card-head"><h3>部署 / 域名访问说明</h3></div>
+  <div class="notice">
+    <b>1. 放到 GitHub</b><br>
+    新建仓库 → 把本文件命名为 <code>index.html</code> 上传 → Settings → Pages → Source 选 main / root → 得到
+    <code>https://用户名.github.io/仓库名/</code>。<br><br>
+    <b>2. 用腾讯云加速域名</b><br>
+    在 EdgeOne 站点里添加加速域名，源站填 GitHub Pages 地址，即可用自有域名访问。<br><br>
+    <b>3. （可选，强烈建议）加一条回源规则</b><br>
+    纯静态直连抖音接口会被浏览器跨域策略拦截（手机实测：直连被拦、公共代理在境内基本超时），
+    所以「评论 / 合集混剪 / 实况图集 / 登录 Cookie」需要一条同源反代规则；配好后本页会自动启用该通道。
+    不配置也能用第三方解析接口完成视频 / 图集 / 封面 / 背景音乐的解析与下载。
+  </div>
+  <pre id="edgeRule">${esc(EDGE_RULE_TEXT)}</pre>
+  <button class="btn tiny" data-act="copy-rule">复制规则说明</button>
+
+  <div class="divider"></div>
+  <div class="card-head"><h3>运行日志</h3><button class="btn tiny ghost" data-act="copy-logs">复制日志</button></div>
+  <pre id="logBox">${esc(logs.join('\n'))}</pre>
+
+  <div class="divider"></div>
+  <div class="notice">
+    本工具仅用于个人学习与备份自己有权保存的内容，请勿用于商业用途或侵犯他人权益。
+    Cookie 仅保存在你自己的浏览器 localStorage 中，不会上传到任何服务器。
+  </div>`;
+}
+
+function openSettings() {
+  $('modalCard').innerHTML = settingsHtml();
+  $('modal').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  $('modal').hidden = true;
+  $('modalCard').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+function collectSettings() {
+  const v = (id) => { const el = $(id); return el ? el.value.trim() : ''; };
+  cfg.channel = v('cfgChannel') || 'auto';
+  cfg.dyPrefix = v('cfgDy') || '/dyapi';
+  cfg.iesPrefix = v('cfgIes') || '/dyapi-ies';
+  cfg.vPrefix = v('cfgV') || '/dyapi-v';
+  cfg.cookieMode = v('cfgCookieMode') || 'header';
+  cfg.customTpl = v('cfgCustom');
+  cfg.timeout = clamp(parseInt(v('cfgTimeout'), 10) || 20000, 3000, 120000);
+  cfg.ua = v('cfgUa') || UA_IPHONE;
+  cfg.proxies = Array.from(document.querySelectorAll('.cfgProxy:checked')).map((x) => x.value);
+  cfg.parseApis = Array.from(document.querySelectorAll('.cfgParseApi:checked')).map((x) => x.value);
+  if (!cfg.parseApis.length) cfg.parseApis = DEFAULT_CFG.parseApis.slice();
+}
+
+async function runChannelTest() {
+  const box = $('testResult');
+  if (!box) return;
+  const target = 'https://www.iesdouyin.com/share/video/7638421965833954419';
+  box.textContent = '检测中…';
+  const lines = [];
+  const cands = ['edge', 'direct', 'custom'].concat(cfg.proxies);
+  for (const ch of cands) {
+    const built = buildChannelRequest(ch, target, {});
+    if (!built) { lines.push(`— ${ch}：未配置，跳过`); box.textContent = lines.join('\n'); continue; }
+    const t0 = performance.now();
+    try {
+      const res = await fetchWithTimeout(built.url, {
+        method: 'GET', headers: built.headers, credentials: 'omit', cache: 'no-store',
+      }, 12000);
+      const txt = await res.text();
+      const ok = /_ROUTER_DATA/.test(txt);
+      lines.push(`${ok ? '✅' : '⚠️'} ${ch}：HTTP ${res.status} · ${(txt.length / 1024).toFixed(1)}KB · ${ok ? '含作品数据，可用' : '可访问但未返回作品数据'} · ${Math.round(performance.now() - t0)}ms`);
+    } catch (e) {
+      lines.push(`❌ ${ch}：${(e && e.message) || e}`);
+    }
+    box.textContent = lines.join('\n');
+  }
+  lines.push('');
+  lines.push('提示：直连/公共代理能返回 HTML 才代表解析可用；评论、合集、登录身份需要带 Cookie 的通道（本站反代）。');
+  box.textContent = lines.join('\n');
+}
+
+/* ======================= 11. 事件绑定 ======================= */
+document.addEventListener('click', async (e) => {
+  // 图片查看器
+  const vimg = e.target.closest('[data-act="view-img"]');
+  if (vimg) {
+    $('viewerImg').src = vimg.dataset.url;
+    $('viewerName').textContent = vimg.dataset.name || '';
+    $('viewer').hidden = false;
+    return;
+  }
+  if (e.target.id === 'viewer' || e.target.id === 'viewerImg') { $('viewer').hidden = true; return; }
+  if (e.target.id === 'modal') { closeModal(); return; }
+
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  const r = S.result;
+
+  switch (act) {
+    case 'paste':
+      try {
+        const t = await navigator.clipboard.readText();
+        if (!t) { toast('剪贴板为空', 'err'); break; }
+        $('shareUrl').value = t.trim();
+        toast('已粘贴', 'ok');
+      } catch (_) { toast('浏览器未授权读取剪贴板，请手动粘贴', 'err'); }
+      break;
+
+    case 'parse': parseUrl(); break;
+    case 'settings': openSettings(); break;
+    case 'modal-close': closeModal(); break;
+    case 'totop': window.scrollTo({ top: 0, behavior: 'smooth' }); break;
+    case 'toggle-desc': S.descExpanded = !S.descExpanded; paint(); break;
+    case 'copy-desc': if (r) copyText(r.description || '', '已复制作品文案'); break;
+
+    /* ---- Cookie ---- */
+    case 'cookie-edit': S.cookiePanel = S.cookiePanel === 'edit' ? null : 'edit'; paint(); break;
+    case 'cookie-view': S.cookiePanel = S.cookiePanel === 'view' ? null : 'view'; paint(); break;
+    case 'cookie-help': S.cookiePanel = S.cookiePanel === 'help' ? null : 'help'; paint(); break;
+    case 'cookie-cancel': S.cookiePanel = null; paint(); break;
+    case 'cookie-copy': copyText(cfg.cookie || ''); break;
+    case 'copy-cookiejs': copyText('copy(document.cookie)', '已复制，去 douyin.com 控制台执行'); break;
+    case 'cookie-paste':
+      try {
+        const t = await navigator.clipboard.readText();
+        const box = $('manualCookie');
+        if (box) box.value = t.trim();
+        S.manualCookie = t.trim();
+        toast('已读取剪贴板', 'ok');
+      } catch (_) { toast('无法读取剪贴板', 'err'); }
+      break;
+    case 'cookie-save': {
+      const box = $('manualCookie');
+      const val = (box ? box.value : S.manualCookie || '').trim();
+      if (!val) { toast('Cookie 为空', 'err'); break; }
+      if (!/sessionid|passport/i.test(val)) toast('提示：缺少 sessionid/passport，可能不是完整登录 Cookie', 'err');
+      cfg.cookie = val;
+      S.manualCookie = '';
+      saveCfg();
+      S.cookiePanel = null;
+      toast('Cookie 已保存到本机浏览器', 'ok');
+      refreshIdentity();
+      paint();
+      break;
+    }
+    case 'guest-save': {
+      const box = $('guestCookie');
+      cfg.guestCookie = (box ? box.value : '').trim();
+      saveCfg();
+      toast('游客 ttwid 已保存', 'ok');
+      refreshIdentity();
+      paint();
+      break;
+    }
+    case 'cookie-clear':
+      cfg.cookie = '';
+      cfg.guestCookie = '';
+      saveCfg();
+      S.cookiePanel = null;
+      S.identity = { state: 'guest', nickname: '' };
+      toast('已清除 Cookie', 'ok');
+      paint();
+      break;
+    case 'cookie-validate': {
+      const ck = effectiveCookie();
+      if (!ck) { toast('还没有 Cookie，请先填写', 'err'); break; }
+      toast('正在验证…');
+      const res = await DouyinParser.validateCookie(ck);
+      toast(res.msg, res.ok ? 'ok' : 'err');
+      refreshIdentity();
+      break;
+    }
+
+    /* ---- 批量 ---- */
+    case 'dl-all': if (r) downloadAllItems(r); break;
+    case 'save-all': if (r) saveAllItems(r); break;
+
+    /* ---- 评论 ---- */
+    case 'comments-toggle':
+      if (S.comments.shown) { S.comments.shown = false; paint(); }
+      else if (S.comments.list.length) { S.comments.shown = true; paint(); }
+      else loadComments(false);
+      break;
+    case 'comments-more': loadComments(true); break;
+    case 'cpage-first': S.comments.page = 0; paint(); break;
+    case 'cpage-prev': S.comments.page = Math.max(0, S.comments.page - 1); paint(); break;
+    case 'cpage-next': S.comments.page++; paint(); break;
+    case 'cpage-last': S.comments.page = 9999; paint(); break;
+    case 'reply': loadReplies(el.dataset.cid, el.dataset.aweme); break;
+    case 'copy-comment': copyText(el.dataset.text || '', '已复制评论'); break;
+    case 'dl-cimg': downloadCommentImage(el.dataset.url); break;
+    case 'save-cimg': {
+      const m = getMedia('cimg:' + el.dataset.url);
+      if (m) saveBlobAs(`douyin_comment_${nowMs()}.${extFromUrl(el.dataset.url)}`, m.blob);
+      break;
+    }
+
+    /* ---- 视频 / 音频 ---- */
+    case 'dl-video': if (r) downloadVideoFile(r); break;
+    case 'copy-video-url': if (r) copyText(r.videoUrl || '', '已复制无水印视频直链'); break;
+    case 'save-video': {
+      const m = getMedia('video');
+      if (m) saveBlobAs(`douyin_${(r && r.videoId) || nowMs()}.mp4`, m.blob);
+      break;
+    }
+    case 'dl-track': if (r) downloadAudioTrack(r); break;
+    case 'save-track': {
+      const m = getMedia('audio');
+      if (m) saveBlobAs(S.audio.name || (audioSaveName(r || {}) + '.mp3'), m.blob);
+      break;
+    }
+    case 'dl-mixaudio': {
+      if (!r || !r.audioUrl) break;
+      S.mixAudio.busy = true; paint();
+      try {
+        const u = 'https://www.douyin.com/aweme/v1/play/?video_id=' + encodeURIComponent(r.audioUrl) + '&ratio=1080p&line=0';
+        const { blob } = await downloadBinary(u, {});
+        putMedia('mixaudio', blob);
+        toast('音频轨下载完成', 'ok');
+      } catch (e) { toast('音频轨下载失败：' + ((e && e.message) || e), 'err'); }
+      S.mixAudio.busy = false; paint();
+      break;
+    }
+    case 'save-mixaudio': {
+      const m = getMedia('mixaudio');
+      if (m) saveBlobAs(`douyin_mixa_${(r && r.videoId) || nowMs()}.mp4`, m.blob);
+      break;
+    }
+
+    /* ---- 合集 / 实况 ---- */
+    case 'fetch-mix': if (r) fetchMix(r.videoId); break;
+    case 'dl-mix-all': {
+      if (!S.mix.videos.length) break;
+      const b = S.mix.batch;
+      b.running = true; b.done = 0; b.idx = -1;
+      paint();
+      for (let i = 0; i < S.mix.videos.length; i++) {
+        b.idx = i;
+        b.text = `${b.done + 1}/${S.mix.videos.length}`;
+        paint();
+        const mv = S.mix.videos[i];
+        if (!mv.videoUrl) continue;
+        try {
+          const { blob } = await downloadBinary(mv.videoUrl, {});
+          putMedia('mix' + i, blob);
+          b.done++;
+        } catch (e) { logLine('合集批量失败 #' + (i + 1) + ': ' + ((e && e.message) || e)); }
+      }
+      b.running = false;
+      b.idx = -1;
+      b.text = '';
+      toast(b.done === S.mix.videos.length
+        ? `全部下载完成（${b.done} 个），可逐个保存`
+        : `下载完成：${b.done}/${S.mix.videos.length} 个成功`, b.done === S.mix.videos.length ? 'ok' : 'err');
+      paint();
+      break;
+    }
+    case 'dl-mix-item': {
+      const i = parseInt(el.dataset.i, 10);
+      const mv = S.mix.videos[i];
+      if (!mv) break;
+      S.mix.dlIdx = i; paint();
+      try {
+        const { blob } = await downloadBinary(mv.videoUrl, {});
+        putMedia('mix' + i, blob);
+      } catch (e) { toast('视频下载失败：' + ((e && e.message) || e), 'err'); }
+      S.mix.dlIdx = -1; paint();
+      break;
+    }
+    case 'save-mix-item': {
+      const i = parseInt(el.dataset.i, 10);
+      const m = getMedia('mix' + i);
+      const mv = S.mix.videos[i] || {};
+      if (m) saveBlobAs(`douyin_${mv.awemeId || ((r && r.videoId) + '_' + (i + 1))}.mp4`, m.blob);
+      break;
+    }
+
+    /* ---- 图片 ---- */
+    case 'dl-img': downloadImageAt(parseInt(el.dataset.i, 10)); break;
+    case 'save-img': {
+      const i = parseInt(el.dataset.i, 10);
+      const m = getMedia('img' + i);
+      const u = r && r.imageUrls[i];
+      if (m) saveBlobAs(`douyin_${(r && r.videoId) || nowMs()}_${String(i + 1).padStart(2, '0')}.${extFromUrl(u)}`, m.blob);
+      break;
+    }
+    case 'dl-all-images': downloadAllImages(); break;
+
+    /* ---- 设置 ---- */
+    case 'cfg-save':
+      collectSettings();
+      saveCfg();
+      toast('已保存设置', 'ok');
+      await probeEdge();
+      refreshIdentity();
+      paint();
+      break;
+    case 'cfg-test': collectSettings(); runChannelTest(); break;
+    case 'cfg-reset':
+      try { localStorage.removeItem(LS_KEY); } catch (_) {}
+      toast('已清空，正在刷新…', 'ok');
+      setTimeout(() => location.reload(), 500);
+      break;
+    case 'copy-rule': copyText(EDGE_RULE_TEXT, '已复制回源规则说明'); break;
+    case 'copy-logs': copyText(logs.join('\n') || '（暂无日志）', '已复制日志'); break;
+  }
+});
+
+document.addEventListener('input', (e) => {
+  const el = e.target.closest('[data-input]');
+  if (!el) return;
+  const key = el.dataset.input;
+  if (key === 'manualCookie') S.manualCookie = el.value;
+  else if (key === 'guestCookie') cfg.guestCookie = el.value;
+  else if (key === 'commentSearch') { S.comments.search = el.value; S.comments.page = 0; paint(); }
+  else if (key === 'commentPages') {
+    const v = el.value.replace(/[^\d]/g, '');
+    el.value = v;
+    S.comments.pages = v || '3';
+    paint();
+  } else if (key === 'commentSort') { S.comments.sort = el.checked; S.comments.page = 0; paint(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!$('viewer').hidden) $('viewer').hidden = true;
+    else if (!$('modal').hidden) closeModal();
+  }
+  if (e.key === 'Enter' && e.target.id === 'shareUrl') parseUrl();
+});
+
+window.addEventListener('scroll', () => {
+  const t = $('toTop');
+  if (t) t.hidden = window.scrollY < 420;
+}, { passive: true });
+
+/* ======================= 12. 启动 ======================= */
+(function init() {
+  loadCfg();
+  paintHeader();
+  paintCookiePanel();
+  renderResult();
+  updateChannelChip();
+  logLine('页面已加载，通道=' + cfg.channel);
+  probeEdge().then(() => {
+    if (edgeOk === false) logLine('未检测到本站反代（/dyapi），将使用直连 + 公共代理');
+  });
+  refreshIdentity();
+  // 支持用 #ck=xxx 或 ?ck=xxx 快速导入 Cookie（不写入服务器，仅本机）
+  try {
+    const hash = location.hash || '';
+    const m = /[#?&]ck=([^&]+)/.exec(hash);
+    if (m) {
+      cfg.cookie = decodeURIComponent(m[1]);
+      saveCfg();
+      history.replaceState(null, '', location.pathname + location.search);
+      refreshIdentity();
+    }
+  } catch (_) {}
+})();
+</script>
+</body>
+</html>
