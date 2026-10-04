@@ -620,6 +620,7 @@ function effectiveCookie() {
 }
 
 let edgeOk = null; // null=未探测，true/false=探测结果
+let edgeProbePromise = null; // 探测中的 Promise（解析前先等它，避免误判通道）
 let lastChannelUsed = '';
 /** 通道健康状态：失败后短时间内不再重试，避免每次都白等超时 */
 const DEAD_TTL = 5 * 60 * 1000;
@@ -629,6 +630,11 @@ function markDead(ch, host) { deadUntil[deadKey(ch, host)] = nowMs() + DEAD_TTL;
 function isDead(ch, host) { return (deadUntil[deadKey(ch, host)] || 0) > nowMs(); }
 /** 单次解析的总时间上限（毫秒，0=不限制）：没有自建反代时避免在公共代理上白等 */
 let parseDeadline = 0;
+/** 是否被抖音风控拦截（响应体包含 ArgusSecurityPlugin） */
+let argusBlocked = false;
+/** 解析结果缓存：同一链接 5 分钟内不重复打接口，避免触发风控 */
+const parseCache = new Map();
+const PARSE_CACHE_TTL = 5 * 60 * 1000;
 
 function hostOf(u) { try { return new URL(u, location.href).hostname; } catch (_) { return ''; } }
 
@@ -662,6 +668,9 @@ function buildChannelRequest(channel, target, opts) {
       if (cfg.cookieMode === 'query') {
         url += (url.includes('?') ? '&' : '?') + '__dyck=' + encodeURIComponent(cookie);
       }
+      // 抖音风控要求带 Uifid 请求头（从 Cookie 里取），对应 Android 端的 webHeaders
+      const uifid = /(?:^|;\s*)UIFID=([^;]+)/.exec(cookie);
+      if (uifid) headers['X-Dy-Uifid'] = uifid[1].trim();
     }
     if (cfg.ua) headers['X-Dy-Ua'] = cfg.ua;
     headers['X-Dy-Referer'] = 'https://www.douyin.com/';
@@ -700,7 +709,11 @@ function channelOrder(target, opts) {
   if (opts.allowDirect !== false) order.push('direct');
   if (edgeOk !== false && !edgePrefixFor(host)) order.push('edge');
   if (cfg.customTpl) order.push('custom');
-  for (const id of cfg.proxies) if (PUBLIC_PROXIES.some((p) => p.id === id)) order.push(id);
+  // 已经有自建反代时不再尝试公共代理（境内基本不通，只会白等超时）
+  const hasSelfProxy = edgeOk === true || !!cfg.customTpl;
+  if (!hasSelfProxy) {
+    for (const id of cfg.proxies) if (PUBLIC_PROXIES.some((p) => p.id === id)) order.push(id);
+  }
   if (!order.length) order.push('direct');
   // 去重 + 跳过最近失败的通道（自建反代和直连除外，它们的失败也可缓存）
   const seen = new Set();
@@ -743,7 +756,16 @@ async function dyFetch(target, opts) {
       });
       if (!res.ok) {
         lastErr = new Error('HTTP ' + res.status);
-        logLine(`✗ [${ch}] ${res.status} ${target.slice(0, 90)}`);
+        // 抖音风控：403 且响应体带 ArgusSecurityPlugin，说明缺 Uifid / 登录 Cookie
+        let hint = '';
+        try {
+          const body = await res.text();
+          if (body.includes('ArgusSecurityPlugin')) {
+            argusBlocked = true;
+            hint = ' · 风控: ' + body.slice(0, 60);
+          }
+        } catch (_) {}
+        logLine(`✗ [${ch}] ${res.status}${hint} ${target.slice(0, 70)}`);
         markDead(ch, host);
         continue;
       }
@@ -854,7 +876,18 @@ const DouyinParser = (() => {
       if (hit) { logLine('短链直连解析成功: ' + res.url.slice(0, 100)); return hit; }
     } catch (e) { logLine('短链直连失败: ' + (e && e.message)); }
 
-    // 2) AllOrigins 的 get 接口会返回重定向后的最终地址
+    // 2) 走通道抓取（代理会自动跟随跳转，返回落地页 HTML；有自建反代时这一步最快）
+    try {
+      const { res } = await dyFetch(shortUrl, { allowDirect: false });
+      const html = await res.text();
+      const hit = matchTypeId(html) || idFromHtml(html.slice(0, 200000));
+      if (hit) { logLine('短链通道解析成功: ' + hit.id); return hit; }
+      const router = extractRouterData(html);
+      if (router) return { routerData: router.data, type: 'video', id: router.id };
+      logLine('短链通道未提取到作品 ID');
+    } catch (e) { logLine('短链通道失败: ' + (e && e.message)); }
+
+    // 3) AllOrigins 的 get 接口会返回重定向后的最终地址（境内通常超时，作为最后兜底）
     try {
       const api = 'https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl);
       const res = await fetchWithTimeout(api, { method: 'GET' }, 15000);
@@ -865,16 +898,6 @@ const DouyinParser = (() => {
       hit = idFromHtml(j && j.contents);
       if (hit) { logLine('短链 HTML 解析成功: ' + hit.id); return hit; }
     } catch (e) { logLine('短链代理失败: ' + (e && e.message)); }
-
-    // 3) 通道抓取（代理会自动跟随跳转，返回落地页 HTML）
-    try {
-      const { res } = await dyFetch(shortUrl, { allowDirect: false });
-      const html = await res.text();
-      const hit = matchTypeId(html) || idFromHtml(html.slice(0, 200000));
-      if (hit) { logLine('短链通道解析成功: ' + hit.id); return hit; }
-      const router = extractRouterData(html);
-      if (router) return { routerData: router.data, type: 'video', id: router.id };
-    } catch (e) { logLine('短链通道失败: ' + (e && e.message)); }
     return null;
   }
 
@@ -928,6 +951,11 @@ const DouyinParser = (() => {
       const { res } = await dyFetch(url, { cookie });
       const body = await res.text();
       if (!body) return null;
+      if (body.includes('ArgusSecurityPlugin')) {
+        argusBlocked = true;
+        logLine('官方接口被风控拦截: ' + body.slice(0, 70));
+        return null;
+      }
       const j = JSON.parse(body);
       return j.aweme_detail || null;
     } catch (e) {
@@ -1183,6 +1211,10 @@ const DouyinParser = (() => {
     if (duration > 0 && duration < 1000) duration *= 1000;
 
     const isVideo = !!videoUrl;
+    // 接口没给视频地址、也没给图片列表：只能拿到封面，不能当成作品内容
+    if (!isVideo && !images.length) {
+      return emptyResult({ error: `${api.name}：该作品未返回视频或图片地址（多为实况图集/长视频，需要「本站反代」通道）` });
+    }
     const r = emptyResult({
       type: isVideo ? 'video' : (images.length ? 'note' : ''),
       videoId: String(jx.item_id || jx.aweme_id || d.aweme_id || d.item_id || ''),
@@ -1194,6 +1226,7 @@ const DouyinParser = (() => {
       musicTitle: '',
       musicAuthor: author,
       author,
+      album: !isVideo && images.length > 0,
       duration,
       width: Number(item.width) || 0,
       height: Number(item.height) || 0,
@@ -1243,6 +1276,18 @@ const DouyinParser = (() => {
   async function parse(shareUrl, cookie) {
     const input = (extractDouyinUrl(shareUrl) || shareUrl || '').trim();
     if (!input) return emptyResult({ error: '请输入抖音分享链接' });
+    const cached = parseCache.get(input);
+    if (cached && nowMs() - cached.at < PARSE_CACHE_TTL) {
+      logLine('命中解析缓存（5 分钟内不重复请求接口）');
+      return cached.result;
+    }
+    // 等一次通道探测（最多 3 秒），否则会把「本站反代」误判成不可用
+    if (edgeOk === null && edgeProbePromise) {
+      await Promise.race([edgeProbePromise.catch(() => {}), sleep(3000)]);
+    }
+    argusBlocked = false;
+    /** 记住成功结果，供重复解析复用 */
+    const remember = (r) => { try { parseCache.set(input, { at: nowMs(), result: r }); } catch (_) {} return r; };
 
     // 通道策略：有自建反代 → 官方接口优先；否则 → 第三方接口优先（直连/公共代理在境内基本不可用）
     const selfProxyReady = !!cfg.customTpl || edgeOk === true;
@@ -1252,6 +1297,7 @@ const DouyinParser = (() => {
     else order = selfProxyReady ? ['official', 'api'] : ['api', 'official'];
 
     let first = null;
+    let albumFallback = null;
     for (const step of order) {
       if (S) S.parseHint = step === 'api' ? '正在请求第三方解析接口…' : '正在尝试抖音官方接口…';
       if (typeof paint === 'function') paint();
@@ -1261,13 +1307,26 @@ const DouyinParser = (() => {
         ? await parseViaApi(input)
         : await parseOfficial(input, cookie);
       parseDeadline = 0;
-      if (r && !r.error) return r;
+      if (r && !r.error) {
+        // 第三方接口只给到图集时，先留着；如果后面还有官方通道，再问一次官方接口
+        // （抖音的实况图集在图集接口里只会返回静态图，视频地址必须走官方接口）
+        if (step === 'api' && r.type === 'note' &&
+            order.indexOf('official') > order.indexOf('api')) {
+          albumFallback = r;
+          continue;
+        }
+        return remember(r);
+      }
       if (!first) first = r;
     }
+    if (albumFallback) return remember(albumFallback);
     const shortLink = /v\.douyin\.com/.test(input);
     const tail = shortLink ? '　分享短链有时效，过期后请重新复制分享链接，或改用完整作品链接（https://www.douyin.com/video/…）。' : '';
+    const argusTip = argusBlocked
+      ? '　抖音对官方接口加了风控校验：请在「手动填写 Cookie」里填入一条带 UIFID 的登录 Cookie（本机 dycookie.txt 里的那份如果已过期，请重新复制），再点「验证」。'
+      : '';
     if (first && first.error) return Object.assign(first, { error: first.error + tail });
-    return emptyResult({ error: '解析失败，请稍后重试。' + tail });
+    return emptyResult({ error: '解析失败，请稍后重试。' + tail + argusTip });
   }
 
   async function fetchIdentity(cookie) {
@@ -1650,7 +1709,9 @@ function renderInfo(r) {
         <button class="btn mini ghost" data-act="copy-desc">复制文案</button>
       </div>` : ''}
     ${r.source === 'parseapi' ? `<div class="spacer"></div>
-      <div class="notice warn">基础解析模式：视频 / 图集 / 封面 / 背景音乐可下载；评论、合集、实况与登录需在设置中配置本站反代。</div>` : ''}
+      <div class="notice warn">${r.type === 'note'
+        ? `这是图集作品，已解析出 ${r.imageUrls.length} 张图片。如果图片本身会动（实况图集），那几段动态视频需要在设置里配置「本站反代」通道后才会出现。`
+        : '基础解析模式：视频 / 图集 / 封面 / 背景音乐可下载；评论、合集、实况与登录需在设置中配置本站反代。'}</div>` : ''}
   </section>`;
 }
 
@@ -2414,6 +2475,58 @@ const EDGE_RULE_TEXT =
 说明：浏览器安全策略禁止网页直接设置 Cookie 请求头，所以登录态只能靠边缘规则把
 本页发送的自定义头 X-Dy-Cookie 映射成 Cookie。不配也能用，只是保持「游客」身份。`;
 
+/* EdgeOne Pages 边缘函数：同源反代抖音接口（粘一次即可开启实况视频 / 合集 / 评论 / 登录） */
+const EDGE_FN_TEXT =
+`// EdgeOne 边缘函数：抖音接口同源反代
+// 作用：把 /dyapi/* 转发到抖音官方接口，解决浏览器跨域限制，并中转 Cookie / UA
+// 部署后本页会自动探测到该通道，实况图集的动态视频、合集、评论、登录立即可用
+const MAP = [
+  ['/dyapi/', 'https://www.douyin.com/'],
+  ['/dyapi-ies/', 'https://www.iesdouyin.com/'],
+  ['/dyapi-v/', 'https://v.douyin.com/']
+];
+const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 ' +
+  '(KHTML, like Gecko) EdgiOS/121.0.2277.107 Version/17.0 Mobile/15E148 Safari/604.1';
+
+async function handleRequest(request) {
+  const url = new URL(request.url);
+  let target = null;
+  for (const [prefix, origin] of MAP) {
+    if (url.pathname.startsWith(prefix)) {
+      target = origin + url.pathname.slice(prefix.length) + url.search;
+      break;
+    }
+  }
+  if (!target) {
+    return new Response('not found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  }
+
+  const headers = new Headers();
+  headers.set('User-Agent', request.headers.get('x-dy-ua') || UA);
+  headers.set('Referer', 'https://www.douyin.com/');
+  headers.set('Accept', '*/*');
+  const ck = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck');
+  if (ck) headers.set('Cookie', ck);
+  // 抖音风控要求带 Uifid 头；页面会直接传，没传就从 Cookie 里取
+  let uifid = request.headers.get('x-dy-uifid');
+  if (!uifid && ck) {
+    const m = /(?:^|;\s*)UIFID=([^;]+)/.exec(ck);
+    if (m) uifid = m[1].trim();
+  }
+  if (uifid) headers.set('Uifid', uifid);
+
+  const resp = await fetch(target, { headers, redirect: 'follow' });
+  const out = new Headers(resp.headers);
+  out.delete('content-encoding');
+  out.delete('content-length');
+  out.set('Access-Control-Allow-Origin', '*');
+  out.set('Access-Control-Allow-Headers', '*');
+  out.set('Cache-Control', 'no-store');
+  return new Response(resp.body, { status: resp.status, headers: out });
+}
+
+addEventListener('fetch', (event) => event.respondWith(handleRequest(event.request)));`;
+
 function settingsHtml() {
   const chans = [
     ['auto', '自动（依次尝试可用通道）'],
@@ -2527,6 +2640,17 @@ function settingsHtml() {
   </div>
   <pre id="edgeRule">${esc(EDGE_RULE_TEXT)}</pre>
   <button class="btn tiny" data-act="copy-rule">复制规则说明</button>
+
+  <div class="divider"></div>
+  <div class="card-head"><h3>一键开启完整功能（EdgeOne 边缘函数）</h3></div>
+  <div class="notice">
+    在 EdgeOne Pages 项目里新建一个「边缘函数」，把下面这段代码整段粘贴进去并部署。
+    部署完成后刷新本页，右上角通道会自动变成「本站反代」，然后：<br>
+    · 实况图集里的动态视频可以下载（和 App 一样）<br>
+    · 合集混剪、独立视频列表、评论区、登录 Cookie 全部可用
+  </div>
+  <pre id="edgeFn">${esc(EDGE_FN_TEXT)}</pre>
+  <button class="btn tiny" data-act="copy-edgefn">复制边缘函数代码</button>
 
   <div class="divider"></div>
   <div class="card-head"><h3>运行日志</h3><button class="btn tiny ghost" data-act="copy-logs">复制日志</button></div>
@@ -2817,6 +2941,7 @@ document.addEventListener('click', async (e) => {
       setTimeout(() => location.reload(), 500);
       break;
     case 'copy-rule': copyText(EDGE_RULE_TEXT, '已复制回源规则说明'); break;
+    case 'copy-edgefn': copyText(EDGE_FN_TEXT, '已复制边缘函数代码，粘贴到 EdgeOne 边缘函数并部署'); break;
     case 'copy-logs': copyText(logs.join('\n') || '（暂无日志）', '已复制日志'); break;
   }
 });
@@ -2857,8 +2982,9 @@ window.addEventListener('scroll', () => {
   renderResult();
   updateChannelChip();
   logLine('页面已加载，通道=' + cfg.channel);
-  probeEdge().then(() => {
-    if (edgeOk === false) logLine('未检测到本站反代（/dyapi），将使用直连 + 公共代理');
+  edgeProbePromise = probeEdge().then((ok) => {
+    if (!ok) logLine('未检测到本站反代（/dyapi），将使用直连 + 公共代理');
+    return ok;
   });
   refreshIdentity();
   // 支持用 #ck=xxx 或 ?ck=xxx 快速导入 Cookie（不写入服务器，仅本机）
