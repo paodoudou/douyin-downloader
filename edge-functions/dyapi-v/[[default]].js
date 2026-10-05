@@ -17,6 +17,8 @@ export default async function onRequest(context) {
   headers.set('User-Agent', request.headers.get('x-dy-ua') || UA);
   headers.set('Referer', 'https://www.douyin.com/');
   headers.set('Accept', '*/*');
+  const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
+  if (env.DY_COOKIE) headers.set('Cookie', env.DY_COOKIE);
 
   const resp = await fetch(target, { headers, redirect: 'follow' });
   const out = new Headers(resp.headers);
