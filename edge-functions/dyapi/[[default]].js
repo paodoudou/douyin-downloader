@@ -345,6 +345,26 @@ export default async function onRequest(context) {
 
   const pathname = url.pathname.slice(PREFIX.length - 1); // 保留开头的 /
   const base = ORIGIN.replace(/\/$/, '');
+
+  // 诊断：/dyapi/__env__ 只回报环境变量是否存在与长度，不返回内容
+  if (pathname === '/__env__') {
+    const info = {
+      hasDY_COOKIE: !!env.DY_COOKIE,
+      hasDY_COOKIE_B64: !!env.DY_COOKIE_B64,
+      chunkLengths: [],
+      dyKeys: Object.keys(env).filter((k) => k.indexOf('DY_') === 0).slice(0, 20),
+      codeVersion: 'sign-v2',
+    };
+    for (let i = 1; i <= 12; i++) {
+      const v = env['DY_COOKIE_B64_' + i];
+      if (v) info.chunkLengths.push(String(v).length);
+    }
+    return new Response(JSON.stringify(info, null, 1), {
+      status: 200,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' },
+    });
+  }
+
   let target;
   try {
     target = base + buildSignedPath(pathname, url.searchParams, uifid, userAgent);
