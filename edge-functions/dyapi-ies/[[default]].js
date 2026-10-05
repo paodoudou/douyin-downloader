@@ -20,7 +20,28 @@ export default async function onRequest(context) {
 
   // 默认 Cookie 从环境变量 DY_COOKIE 读取（控制台配置，不写入仓库、不下发浏览器）
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
-  const cookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || env.DY_COOKIE;
+  const decode = (raw) => {
+    if (!raw) return '';
+    if (/^[A-Za-z0-9\-_]+$/.test(raw) && raw.length > 40) {
+      try {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let s = raw.replace(/-/g, '+').replace(/_/g, '/');
+        while (s.length % 4) s += '=';
+        let out = '', buf = 0, bits = 0;
+        for (const ch of s) {
+          if (ch === '=') break;
+          const v = chars.indexOf(ch);
+          if (v < 0) continue;
+          buf = (buf << 6) | v; bits += 6;
+          if (bits >= 8) { bits -= 8; out += String.fromCharCode((buf >> bits) & 0xFF); }
+        }
+        if (out.includes('=')) return out;
+      } catch (_) {}
+    }
+    return raw;
+  };
+  const envCookie = decode(env.DY_COOKIE_B64 || env.DY_COOKIE || '');
+  const cookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || envCookie;
   if (cookie) headers.set('Cookie', cookie);
 
   let uifid = request.headers.get('x-dy-uifid');
