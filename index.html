@@ -1481,7 +1481,13 @@ const DouyinParser = (() => {
     }
     argusBlocked = false;
     /** 记住成功结果，供重复解析复用 */
-    const remember = (r) => { try { parseCache.set(input, { at: nowMs(), result: r }); } catch (_) {} return r; };
+    const remember = (r) => {
+      // 只缓存「完整」结果：没走到官方数据（如缺 Cookie / 风控拦截）时不缓存，
+      // 这样补好 Cookie 或服务端恢复后，重新解析立刻能拿到实况视频
+      const complete = !argusBlocked && !(r && r.source === 'parseapi' && r.type === 'note');
+      if (complete) { try { parseCache.set(input, { at: nowMs(), result: r }); } catch (_) {} }
+      return r;
+    };
 
     // 通道策略：有自建反代 → 官方接口优先；否则 → 第三方接口优先（直连/公共代理在境内基本不可用）
     const selfProxyReady = !!cfg.customTpl || edgeOk === true;
