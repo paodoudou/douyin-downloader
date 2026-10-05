@@ -1916,6 +1916,18 @@ function renderInfo(r) {
       </div>
       <div class="row" style="margin-top:8px">
         <a class="btn tiny" href="https://www.douyin.com/video/${encodeURIComponent(r.videoId || '')}" target="_blank" rel="noopener">在抖音网页版打开</a>
+        <button class="btn tiny ok" data-act="cookie-edit">填写 Cookie</button>
+      </div>` : ''}
+    ${(r.source !== 'parseapi' && r.type === 'note' && !effectiveCookie()) ? `<div class="spacer"></div>
+      <div class="notice warn">
+        这个作品是<b>实况图集</b>：每张图其实是一小段视频，而动态视频属于登录态数据，抖音要求请求里带 <b>UIFID</b>（来自登录 Cookie）。
+        现在本机还没填 Cookie，所以只能拿到 ${r.imageUrls.length} 张静态图。
+        <div class="spacer"></div>
+        <span class="hint">填一次即可长期有效：电脑浏览器打开 douyin.com → F12 → Network → 点任一请求 → 复制 Request Headers 里的 Cookie 一整行。</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn tiny ok" data-act="cookie-edit">填写 Cookie</button>
+        <button class="btn tiny" data-act="cookie-help">怎么获取？</button>
       </div>` : ''}
   </section>`;
 }
