@@ -309,6 +309,25 @@ function decodeEnvCookie(raw) {
   }
   return raw;
 }
+/** 支持单条或分片（控制台对单条值有 1000 字符限制）：DY_COOKIE_B64_1..N / DY_COOKIE_1..N */
+function envCookieRaw(env) {
+  if (env.DY_COOKIE_B64) return decodeEnvCookie(env.DY_COOKIE_B64);
+  const b64 = [];
+  for (let i = 1; i <= 12; i++) {
+    const v = env['DY_COOKIE_B64_' + i];
+    if (!v) break;
+    b64.push(String(v).trim());
+  }
+  if (b64.length) return decodeEnvCookie(b64.join(''));
+  if (env.DY_COOKIE) return decodeEnvCookie(env.DY_COOKIE);
+  const plain = [];
+  for (let i = 1; i <= 12; i++) {
+    const v = env['DY_COOKIE_' + i];
+    if (!v) break;
+    plain.push(String(v).trim());
+  }
+  return plain.join('');
+}
 
 export default async function onRequest(context) {
   const request = context.request;
@@ -317,7 +336,7 @@ export default async function onRequest(context) {
     return new Response('not found', { status: 404 });
   }
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
-  const envCookie = decodeEnvCookie(env.DY_COOKIE_B64 || env.DY_COOKIE || '');
+  const envCookie = envCookieRaw(env);
   // 访客自己填的 Cookie 优先；没填就用环境变量里的默认 Cookie（默认值不写入代码、不下发浏览器）
   const rawCookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || envCookie;
   const cookie = trimCookie(rawCookie);
