@@ -2547,6 +2547,55 @@ async function handleRequest(request) {
 
 addEventListener('fetch', (event) => event.respondWith(handleRequest(event.request)));`;
 
+/* 有些版本的 EdgeOne 控制台给的是 ES Module 模板（export default），用这份 */
+const EDGE_FN_TEXT_MOD =
+`// EdgeOne 边缘函数（ES Module 写法）——抖音接口同源反代
+const MAP = [
+  ['/dyapi/', 'https://www.douyin.com/'],
+  ['/dyapi-ies/', 'https://www.iesdouyin.com/'],
+  ['/dyapi-v/', 'https://v.douyin.com/']
+];
+const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 ' +
+  '(KHTML, like Gecko) EdgiOS/121.0.2277.107 Version/17.0 Mobile/15E148 Safari/604.1';
+
+async function proxy(request) {
+  const url = new URL(request.url);
+  let target = null;
+  for (const [prefix, origin] of MAP) {
+    if (url.pathname.startsWith(prefix)) {
+      target = origin + url.pathname.slice(prefix.length) + url.search;
+      break;
+    }
+  }
+  if (!target) return new Response('not found', { status: 404 });
+
+  const headers = new Headers();
+  headers.set('User-Agent', request.headers.get('x-dy-ua') || UA);
+  headers.set('Referer', 'https://www.douyin.com/');
+  headers.set('Accept', '*/*');
+  const ck = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck');
+  if (ck) headers.set('Cookie', ck);
+  let uifid = request.headers.get('x-dy-uifid');
+  if (!uifid && ck) {
+    const m = /(?:^|;\\s*)UIFID=([^;]+)/.exec(ck);
+    if (m) uifid = m[1].trim();
+  }
+  if (uifid) headers.set('Uifid', uifid);
+
+  const resp = await fetch(target, { headers, redirect: 'follow' });
+  const out = new Headers(resp.headers);
+  out.delete('content-encoding');
+  out.delete('content-length');
+  out.set('X-Final-Url', resp.url);
+  out.set('Access-Control-Allow-Origin', '*');
+  out.set('Cache-Control', 'no-store');
+  return new Response(resp.body, { status: resp.status, headers: out });
+}
+
+// 若模板是 export default async function onRequest(context)，把下面这行换成：
+//   export default async function onRequest(context) { return proxy(context.request); }
+export default { async fetch(request) { return proxy(request); } };`;
+
 function settingsHtml() {
   const chans = [
     ['auto', '自动（依次尝试可用通道）'],
@@ -2671,6 +2720,12 @@ function settingsHtml() {
   </div>
   <pre id="edgeFn">${esc(EDGE_FN_TEXT)}</pre>
   <button class="btn tiny" data-act="copy-edgefn">复制边缘函数代码</button>
+  <div class="desc" style="margin-top:8px">
+    如果控制台给你的模板是 <code>export default</code> 写法（不是 addEventListener），
+    就用下面这份：
+  </div>
+  <pre>${esc(EDGE_FN_TEXT_MOD)}</pre>
+  <button class="btn tiny" data-act="copy-edgefn-mod">复制 ES Module 版代码</button>
 
   <div class="divider"></div>
   <div class="card-head"><h3>运行日志</h3><button class="btn tiny ghost" data-act="copy-logs">复制日志</button></div>
@@ -2962,6 +3017,7 @@ document.addEventListener('click', async (e) => {
       break;
     case 'copy-rule': copyText(EDGE_RULE_TEXT, '已复制回源规则说明'); break;
     case 'copy-edgefn': copyText(EDGE_FN_TEXT, '已复制边缘函数代码，粘贴到 EdgeOne 边缘函数并部署'); break;
+    case 'copy-edgefn-mod': copyText(EDGE_FN_TEXT_MOD, '已复制 ES Module 版代码'); break;
     case 'copy-logs': copyText(logs.join('\n') || '（暂无日志）', '已复制日志'); break;
   }
 });
