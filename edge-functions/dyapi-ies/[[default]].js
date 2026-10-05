@@ -20,7 +20,7 @@ export default async function onRequest(context) {
 
   // 默认 Cookie 从环境变量 DY_COOKIE 读取（控制台配置，不写入仓库、不下发浏览器）
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
-  const cookie = env.DY_COOKIE || request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck');
+  const cookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || env.DY_COOKIE;
   if (cookie) headers.set('Cookie', cookie);
 
   let uifid = request.headers.get('x-dy-uifid');
