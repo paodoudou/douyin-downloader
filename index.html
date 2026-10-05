@@ -787,8 +787,19 @@ function buildChannelRequest(channel, target, opts) {
   if (channel === 'edge') {
     let u;
     try { u = new URL(target, location.href); } catch (_) { return null; }
+    // 媒体下载：统一走边缘节点的通用取流通道（CDN 域名不在反代前缀范围内）
+    if (opts.media) {
+      if (u.protocol !== 'https:') return null;
+      const proxyBase = String(cfg.dyPrefix || '/dyapi').replace(/\/+$/, '') + '/__proxy__?u=';
+      return { url: proxyBase + encodeURIComponent(target), headers: {}, proxy: true };
+    }
     const prefix = edgePrefixFor(u.hostname);
-    if (!prefix) return null;
+    if (!prefix) {
+      // 非抖音主站域名（如图片/视频 CDN）也交给通用取流通道
+      if (u.protocol !== 'https:') return null;
+      const proxyBase = String(cfg.dyPrefix || '/dyapi').replace(/\/+$/, '') + '/__proxy__?u=';
+      return { url: proxyBase + encodeURIComponent(target), headers: {}, proxy: true };
+    }
     const base = String(prefix).replace(/\/+$/, '');
     let url = base + u.pathname + u.search;
     // 同源请求不触发 CORS 预检，可安全带上自定义头，由边缘规则映射回 Cookie/UA
@@ -1711,7 +1722,7 @@ async function downloadBinary(url, opts) {
   const order = channelOrder(url, { cookie: opts.cookie });
   let lastErr = null;
   for (const ch of order) {
-    const built = buildChannelRequest(ch, url, { cookie: opts.cookie, extraHeaders: { Accept: '*/*' } });
+    const built = buildChannelRequest(ch, url, { cookie: opts.cookie, media: true, extraHeaders: { Accept: '*/*' } });
     if (!built) continue;
     try {
       const res = await fetchWithTimeout(built.url, {
