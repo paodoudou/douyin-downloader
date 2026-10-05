@@ -879,6 +879,10 @@ const DouyinParser = (() => {
     // 2) 走通道抓取（代理会自动跟随跳转，返回落地页 HTML；有自建反代时这一步最快）
     try {
       const { res } = await dyFetch(shortUrl, { allowDirect: false });
+      // 自建反代是同源请求，可读取响应头里的最终地址（最可靠）
+      const finalUrl = res.headers.get('x-final-url') || '';
+      const byHeader = matchTypeId(finalUrl);
+      if (byHeader) { logLine('短链通道解析成功(响应头): ' + finalUrl.slice(0, 100)); return byHeader; }
       const html = await res.text();
       const hit = matchTypeId(html) || idFromHtml(html.slice(0, 200000));
       if (hit) { logLine('短链通道解析成功: ' + hit.id); return hit; }
@@ -887,17 +891,19 @@ const DouyinParser = (() => {
       logLine('短链通道未提取到作品 ID');
     } catch (e) { logLine('短链通道失败: ' + (e && e.message)); }
 
-    // 3) AllOrigins 的 get 接口会返回重定向后的最终地址（境内通常超时，作为最后兜底）
-    try {
-      const api = 'https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl);
-      const res = await fetchWithTimeout(api, { method: 'GET' }, 15000);
-      const j = await res.json();
-      const finalUrl = (j && j.status && j.status.url) || '';
-      let hit = matchTypeId(finalUrl);
-      if (hit) { logLine('短链代理解析成功: ' + finalUrl.slice(0, 100)); return hit; }
-      hit = idFromHtml(j && j.contents);
-      if (hit) { logLine('短链 HTML 解析成功: ' + hit.id); return hit; }
-    } catch (e) { logLine('短链代理失败: ' + (e && e.message)); }
+    // 3) AllOrigins 兜底（境内通常超时；已有自建反代时跳过，省 15 秒）
+    if (!(edgeOk === true || cfg.customTpl)) {
+      try {
+        const api = 'https://api.allorigins.win/get?url=' + encodeURIComponent(shortUrl);
+        const res = await fetchWithTimeout(api, { method: 'GET' }, 15000);
+        const j = await res.json();
+        const finalUrl = (j && j.status && j.status.url) || '';
+        let hit = matchTypeId(finalUrl);
+        if (hit) { logLine('短链代理解析成功: ' + finalUrl.slice(0, 100)); return hit; }
+        hit = idFromHtml(j && j.contents);
+        if (hit) { logLine('短链 HTML 解析成功: ' + hit.id); return hit; }
+      } catch (e) { logLine('短链代理失败: ' + (e && e.message)); }
+    }
     return null;
   }
 
@@ -966,7 +972,8 @@ const DouyinParser = (() => {
 
   async function fetchRouterData(type, id, cookie, shortUrl) {
     try {
-      const target = shortUrl || API.share(type, id);
+      // 用作品 ID 拼标准分享页最可靠：短链会跳到 slides 页，那份 HTML 不含作品数据
+      const target = id ? API.share(type, id) : (shortUrl || API.share(type, id));
       const { res } = await dyFetch(target, { cookie, allowDirect: false });
       const html = await res.text();
       const router = extractRouterData(html);
@@ -976,6 +983,16 @@ const DouyinParser = (() => {
         const j = JSON.parse(html);
         if (j && j.loaderData) return j;
       } catch (_) {}
+      // slides 页没有数据时，用 note 页再试一次（抖音部分实况图集只在 note 分享页返回数据）
+      if (type !== 'note' && id) {
+        const alt = API.share('note', id);
+        try {
+          const r2 = await dyFetch(alt, { cookie, allowDirect: false });
+          const h2 = await r2.res.text();
+          const router2 = extractRouterData(h2);
+          if (router2) { logLine('分享页(note)解析成功'); return router2.data; }
+        } catch (_) {}
+      }
       return null;
     } catch (e) {
       logLine('分享页抓取失败: ' + (e && e.message));
@@ -1075,7 +1092,9 @@ const DouyinParser = (() => {
         r.type = 'live'; r.imageUrls = images; r.liveVideos = lives; r.coverUrl = images[0];
         return r;
       }
-      const hasGroup = !!(item.group_id_str || '');
+      // 合集判定以 mix_info 为准：普通图集也带 group_id_str，用它会把图集误判成合集
+      const mixInfo = item.mix_info || item.mixInfo || null;
+      const hasGroup = !!(mixInfo && (mixInfo.mix_id || mixInfo.mix_name)) || !!item.mix_id;
       const video = item.video;
       const placeholder = video && video.duration === 0 && video.width === 0;
       if (placeholder && hasGroup) {
@@ -2519,6 +2538,7 @@ async function handleRequest(request) {
   const out = new Headers(resp.headers);
   out.delete('content-encoding');
   out.delete('content-length');
+  out.set('X-Final-Url', resp.url);   // 回传最终跳转地址，方便短链解析作品 ID
   out.set('Access-Control-Allow-Origin', '*');
   out.set('Access-Control-Allow-Headers', '*');
   out.set('Cache-Control', 'no-store');
