@@ -18,7 +18,27 @@ export default async function onRequest(context) {
   headers.set('Referer', 'https://www.douyin.com/');
   headers.set('Accept', '*/*');
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
-  if (env.DY_COOKIE) headers.set('Cookie', env.DY_COOKIE);
+  const rawEnv = env.DY_COOKIE_B64 || env.DY_COOKIE || '';
+  if (rawEnv) {
+    let cookie = rawEnv;
+    if (/^[A-Za-z0-9\-_]+$/.test(rawEnv) && rawEnv.length > 40) {
+      try {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let s = rawEnv.replace(/-/g, '+').replace(/_/g, '/');
+        while (s.length % 4) s += '=';
+        let out = '', buf = 0, bits = 0;
+        for (const ch of s) {
+          if (ch === '=') break;
+          const v = chars.indexOf(ch);
+          if (v < 0) continue;
+          buf = (buf << 6) | v; bits += 6;
+          if (bits >= 8) { bits -= 8; out += String.fromCharCode((buf >> bits) & 0xFF); }
+        }
+        if (out.includes('=')) cookie = out;
+      } catch (_) {}
+    }
+    headers.set('Cookie', cookie);
+  }
 
   const resp = await fetch(target, { headers, redirect: 'follow' });
   const out = new Headers(resp.headers);
