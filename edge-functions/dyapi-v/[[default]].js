@@ -18,7 +18,13 @@ export default async function onRequest(context) {
   headers.set('Referer', 'https://www.douyin.com/');
   headers.set('Accept', '*/*');
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
-  const rawEnv = env.DY_COOKIE_B64 || env.DY_COOKIE || '';
+  const chunks = [];
+  for (let i = 1; i <= 12; i++) {
+    const v = env['DY_COOKIE_B64_' + i];
+    if (!v) break;
+    chunks.push(String(v).trim());
+  }
+  const rawEnv = env.DY_COOKIE_B64 || (chunks.length ? chunks.join('') : '') || env.DY_COOKIE || '';
   if (rawEnv) {
     let cookie = rawEnv;
     if (/^[A-Za-z0-9\-_]+$/.test(rawEnv) && rawEnv.length > 40) {
