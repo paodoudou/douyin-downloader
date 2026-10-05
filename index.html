@@ -1731,6 +1731,15 @@ function renderInfo(r) {
       <div class="notice warn">${r.type === 'note'
         ? `这是图集作品，已解析出 ${r.imageUrls.length} 张图片。如果图片本身会动（实况图集），那几段动态视频需要在设置里配置「本站反代」通道后才会出现。`
         : '基础解析模式：视频 / 图集 / 封面 / 背景音乐可下载；评论、合集、实况与登录需在设置中配置本站反代。'}</div>` : ''}
+    ${(r.source !== 'parseapi' && r.type === 'note' && argusBlocked) ? `<div class="spacer"></div>
+      <div class="notice warn">
+        这个作品是<b>实况图集</b>：每张图其实是一小段视频，但视频地址只有抖音官方接口才返回。
+        当前服务器出口被抖音风控判定为非浏览器客户端（返回 403），所以这里只能列出 ${r.imageUrls.length} 张静态图。
+        动态版本可以先用抖音 App 下载。
+      </div>
+      <div class="row" style="margin-top:8px">
+        <a class="btn tiny" href="https://www.douyin.com/video/${encodeURIComponent(r.videoId || '')}" target="_blank" rel="noopener">在抖音网页版打开</a>
+      </div>` : ''}
   </section>`;
 }
 
