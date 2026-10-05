@@ -2713,8 +2713,11 @@ function settingsHtml() {
   <div class="divider"></div>
   <div class="card-head"><h3>一键开启完整功能（EdgeOne 边缘函数）</h3></div>
   <div class="notice">
-    在 EdgeOne Pages 项目里新建一个「边缘函数」，把下面这段代码整段粘贴进去并部署。
-    部署完成后刷新本页，右上角通道会自动变成「本站反代」，然后：<br>
+    <b>方式一（推荐，无需操作）：</b>本仓库里已经放好了 <code>edge-functions/dyapi</code>、
+    <code>edge-functions/dyapi-ies</code>、<code>edge-functions/dyapi-v</code> 三个边缘函数，
+    Makers 项目每次从 main 分支构建时会自动部署它们，部署完成刷新本页即可。<br>
+    <b>方式二（手动）：</b>在控制台新建边缘函数，把下面代码粘贴进去。<br>
+    两种方式任一完成后，右上角通道会自动变成「本站反代」，然后：<br>
     · 实况图集里的动态视频可以下载（和 App 一样）<br>
     · 合集混剪、独立视频列表、评论区、登录 Cookie 全部可用
   </div>
