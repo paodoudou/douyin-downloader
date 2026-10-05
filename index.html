@@ -3285,7 +3285,8 @@ window.addEventListener('scroll', () => {
     return ok;
   });
   refreshIdentity();
-  // 支持用 #ck=xxx 或 ?ck=xxx 快速导入 Cookie（不写入服务器，仅本机）
+  // 支持用 #ck=xxx 或 ?ck=xxx 快速导入 Cookie（不写入服务器，仅本机），
+  // 以及 #u=分享链接 直接解析（方便从外部一键打开）
   try {
     const hash = location.hash || '';
     const m = /[#?&]ck=([^&]+)/.exec(hash);
@@ -3294,6 +3295,13 @@ window.addEventListener('scroll', () => {
       saveCfg();
       history.replaceState(null, '', location.pathname + location.search);
       refreshIdentity();
+    }
+    const mu = /[#?&]u=([^&]+)/.exec(hash);
+    if (mu) {
+      const link = decodeURIComponent(mu[1]);
+      const box = $('shareUrl');
+      if (box) box.value = link;
+      setTimeout(() => { parseUrl(); }, 400);
     }
   } catch (_) {}
 })();
