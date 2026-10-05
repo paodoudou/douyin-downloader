@@ -435,6 +435,131 @@ const TE = new TextEncoder();
 const toHex = (bytes) => Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
 const utf8 = (s) => TE.encode(s);
 
+/* ============================== 3.5 MD5 ==============================
+ * 抖音 x-secsdk-web-signature 用 MD5，见下方 WebSign
+ * ==================================================================== */
+const md5hex = (() => {
+  const rl = (x, c) => (x << c) | (x >>> (32 - c));
+  const au = (x, y) => {
+    const l = (x & 0xFFFF) + (y & 0xFFFF);
+    return (((x >> 16) + (y >> 16) + (l >> 16)) << 16) | (l & 0xFFFF);
+  };
+  const cmn = (q, a, b, x, s, t) => au(rl(au(au(a, q), au(x, t)), s), b);
+  const ff = (a, b, c, d, x, s, t) => cmn((b & c) | (~b & d), a, b, x, s, t);
+  const gg = (a, b, c, d, x, s, t) => cmn((b & d) | (c & ~d), a, b, x, s, t);
+  const hh = (a, b, c, d, x, s, t) => cmn(b ^ c ^ d, a, b, x, s, t);
+  const ii = (a, b, c, d, x, s, t) => cmn(c ^ (b | ~d), a, b, x, s, t);
+  const hexChars = '0123456789abcdef';
+  return function (str) {
+    const bytes = utf8(str);
+    const bitLen = bytes.length * 8;
+    const withOne = bytes.length + 1;
+    const padLen = (56 - (withOne % 64) + 64) % 64;
+    const total = withOne + padLen + 8;
+    const buf = new Uint8Array(total);
+    buf.set(bytes, 0);
+    buf[bytes.length] = 0x80;
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(total - 8, bitLen >>> 0, true);
+    dv.setUint32(total - 4, Math.floor(bitLen / 4294967296), true);
+    let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+    const w = new Int32Array(16);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) w[i] = dv.getInt32(off + i * 4, true);
+      const [oa, ob, oc, od] = [a, b, c, d];
+      a = ff(a, b, c, d, w[0], 7, -680876936); d = ff(d, a, b, c, w[1], 12, -389564586);
+      c = ff(c, d, a, b, w[2], 17, 606105819); b = ff(b, c, d, a, w[3], 22, -1044525330);
+      a = ff(a, b, c, d, w[4], 7, -176418897); d = ff(d, a, b, c, w[5], 12, 1200080426);
+      c = ff(c, d, a, b, w[6], 17, -1473231341); b = ff(b, c, d, a, w[7], 22, -45705983);
+      a = ff(a, b, c, d, w[8], 7, 1770035416); d = ff(d, a, b, c, w[9], 12, -1958414417);
+      c = ff(c, d, a, b, w[10], 17, -42063); b = ff(b, c, d, a, w[11], 22, -1990404162);
+      a = ff(a, b, c, d, w[12], 7, 1804603682); d = ff(d, a, b, c, w[13], 12, -40341101);
+      c = ff(c, d, a, b, w[14], 17, -1502002290); b = ff(b, c, d, a, w[15], 22, 1236535329);
+      a = gg(a, b, c, d, w[1], 5, -165796510); d = gg(d, a, b, c, w[6], 9, -1069501632);
+      c = gg(c, d, a, b, w[11], 14, 643717713); b = gg(b, c, d, a, w[0], 20, -373897302);
+      a = gg(a, b, c, d, w[5], 5, -701558691); d = gg(d, a, b, c, w[10], 9, 38016083);
+      c = gg(c, d, a, b, w[15], 14, -660478335); b = gg(b, c, d, a, w[4], 20, -405537848);
+      a = gg(a, b, c, d, w[9], 5, 568446438); d = gg(d, a, b, c, w[14], 9, -1019803690);
+      c = gg(c, d, a, b, w[3], 14, -187363961); b = gg(b, c, d, a, w[8], 20, 1163531501);
+      a = gg(a, b, c, d, w[13], 5, -1444681467); d = gg(d, a, b, c, w[2], 9, -51403784);
+      c = gg(c, d, a, b, w[7], 14, 1735328473); b = gg(b, c, d, a, w[12], 20, -1926607734);
+      a = hh(a, b, c, d, w[5], 4, -378558); d = hh(d, a, b, c, w[8], 11, -2022574463);
+      c = hh(c, d, a, b, w[11], 16, 1839030562); b = hh(b, c, d, a, w[14], 23, -35309556);
+      a = hh(a, b, c, d, w[1], 4, -1530992060); d = hh(d, a, b, c, w[4], 11, 1272893353);
+      c = hh(c, d, a, b, w[7], 16, -155497632); b = hh(b, c, d, a, w[10], 23, -1094730640);
+      a = hh(a, b, c, d, w[13], 4, 681279174); d = hh(d, a, b, c, w[0], 11, -358537222);
+      c = hh(c, d, a, b, w[3], 16, -722521979); b = hh(b, c, d, a, w[6], 23, 76029189);
+      a = hh(a, b, c, d, w[9], 4, -640364487); d = hh(d, a, b, c, w[12], 11, -421815835);
+      c = hh(c, d, a, b, w[15], 16, 530742520); b = hh(b, c, d, a, w[2], 23, -995338651);
+      a = ii(a, b, c, d, w[0], 6, -198630844); d = ii(d, a, b, c, w[7], 10, 1126891415);
+      c = ii(c, d, a, b, w[14], 15, -1416354905); b = ii(b, c, d, a, w[5], 21, -57434055);
+      a = ii(a, b, c, d, w[12], 6, 1700485571); d = ii(d, a, b, c, w[3], 10, -1894986606);
+      c = ii(c, d, a, b, w[10], 15, -1051523); b = ii(b, c, d, a, w[1], 21, -2054922799);
+      a = ii(a, b, c, d, w[8], 6, 1873313359); d = ii(d, a, b, c, w[15], 10, -30611744);
+      c = ii(c, d, a, b, w[6], 15, -1560198380); b = ii(b, c, d, a, w[13], 21, 1309151649);
+      a = ii(a, b, c, d, w[4], 6, -145523070); d = ii(d, a, b, c, w[11], 10, -1120210379);
+      c = ii(c, d, a, b, w[2], 15, 718787259); b = ii(b, c, d, a, w[9], 21, -343485551);
+      a = (a + oa) | 0; b = (b + ob) | 0; c = (c + oc) | 0; d = (d + od) | 0;
+    }
+    let out = '';
+    [a, b, c, d].forEach((v) => {
+      for (let i = 0; i < 4; i++) {
+        const byte = (v >>> (i * 8)) & 0xFF;
+        out += hexChars[(byte >> 4) & 0xF] + hexChars[byte & 0xF];
+      }
+    });
+    return out;
+  };
+})();
+
+/* ===================== 3.6 抖音 WebSign（x-secsdk-web-signature） =====================
+ * 移植自 TikTokDownloader 的 encrypt/websign.py（原作者 Evil0ctal 逆向 secsdk）
+ * ================================================================================= */
+const SECSDK_SALT = 'A96D855A08C0A9707F8BEF0D9A527E4E';
+/** 抖音做了签名保护的接口路径（官方 SDK 的 protectedHost 列表） */
+const SIGNED_PATHS = [
+  '/aweme/v1/web/aweme/detail/', '/aweme/v1/web/aweme/post/', '/aweme/v1/web/aweme/favorite/',
+  '/aweme/v1/web/aweme/listcollection/', '/aweme/v1/web/mix/aweme/', '/aweme/v1/web/tab/feed/',
+  '/aweme/v1/web/mix/list/', '/aweme/v1/web/music/aweme/', '/aweme/v1/web/music/list/',
+  '/aweme/v1/web/mix/detail/', '/aweme/v1/web/mix/listcollection/', '/aweme/v1/web/music/detail/',
+  '/aweme/v1/web/collects/list/', '/aweme/v1/web/collects/video/list/',
+];
+const wsQuote = (s) => encodeURIComponent(s)
+  .replace(/[!'()~]/g, (ch) => '%' + ch.charCodeAt(0).toString(16).toUpperCase());
+/** 把 query 规范化成 WebSign 的字节形式（解一次码再用 safe='*-._' 重编码） */
+function websignNormalize(query) {
+  return String(query).split('&').filter(Boolean).map((part) => {
+    const i = part.indexOf('=');
+    const name = i < 0 ? part : part.slice(0, i);
+    const value = i < 0 ? '' : part.slice(i + 1);
+    let dn = name, dv = value;
+    try { dn = decodeURIComponent(name); } catch (_) {}
+    try { dv = decodeURIComponent(value); } catch (_) {}
+    return wsQuote(dn) + '=' + wsQuote(dv);
+  }).join('&');
+}
+/** 从 Cookie 中取出 Uifid（抖音风控要求） */
+function cookieUifid(cookie) {
+  const m = /(?:^|;\s*)UIFID=([^;]+)/.exec(cookie || '');
+  return m ? m[1].trim() : '';
+}
+/** 生成带 a_bogus（受保护接口再加 x-secsdk-web-signature）的完整请求地址 */
+function buildDouyinUrl(baseUrl, params, uifid) {
+  let path = baseUrl;
+  try { path = new URL(baseUrl, location.href).pathname; } catch (_) {}
+  const protectedPath = SIGNED_PATHS.indexOf(path) >= 0;
+  const raw = Object.keys(params).map((k) => k + '=' + params[k]).join('&');
+  let query = raw;
+  if (protectedPath && uifid) query = websignNormalize(query);
+  const ab = ABogus.sign(query, cfg.ua);
+  let signed = query + '&a_bogus=' + encodeURIComponent(ab);
+  if (!(protectedPath && uifid)) return baseUrl + '?' + signed;
+  const stamp = String(Math.floor(Date.now() / 1000));
+  const withTs = websignNormalize(signed + '&timestamp=' + stamp);
+  const sig = md5hex(`${uifid}_${stamp}_${SECSDK_SALT}_${withTs}`);
+  return baseUrl + '?' + withTs + '&x-secsdk-web-signature=' + sig;
+}
+
 /* ============================= 4. A-Bogus =============================
  * 移植自 ABogus.kt / TikTokDownloader aBogus.py
  * ==================================================================== */
@@ -869,6 +994,23 @@ const API = {
 };
 
 const DouyinParser = (() => {
+  /** 组装通用接口参数（对齐抖音网页客户端的参数集，含 Uifid） */
+  function apiParams(extra, cookie) {
+    const uifid = cookieUifid(cookie);
+    const p = Object.assign({
+      device_platform: 'webapp', aid: '6383', channel: 'channel_pc_web',
+      cookie_enabled: 'true', screen_width: '1536', screen_height: '864',
+      browser_language: 'zh-CN', browser_platform: 'Win32', browser_name: 'Edge',
+      browser_version: '131.0.0.0', browser_online: 'true',
+      engine_name: 'Blink', engine_version: '131.0.0.0', os_name: 'Windows', os_version: '10',
+      cpu_core_num: '8', device_memory: '8', platform: 'PC',
+      downlink: '10', effective_type: '4g', round_trip_time: '100',
+      version_code: '190500', version_name: '19.5.0',
+    }, extra || {});
+    if (uifid) p.uifid = uifid;
+    return { params: p, uifid };
+  }
+
   const extractDouyinUrl = (text) => {
     const m = /https?:\/\/[^\s]*douyin\.com[^\s]*/.exec(text || '');
     return m ? m[0] : null;
@@ -982,13 +1124,8 @@ const DouyinParser = (() => {
 
   async function fetchDetailItem(noteId, cookie) {
     try {
-      const params = {
-        aweme_id: noteId,
-        version_code: '190500',
-        version_name: '19.5.0',
-        aid: '6383',
-      };
-      const url = ABogus.signUrl(API.detail, params, cfg.ua);
+      const { params, uifid } = apiParams({ aweme_id: noteId }, cookie);
+      const url = buildDouyinUrl(API.detail, params, uifid);
       const { res } = await dyFetch(url, { cookie });
       const body = await res.text();
       if (!body) return null;
@@ -1424,8 +1561,8 @@ const DouyinParser = (() => {
   /** 合集/混剪：Detail → mix_id → mix API 分页（对应 fetchAllMixVideosWithABogus） */
   async function fetchAllMix(noteId, cookie, onProgress) {
     try {
-      const params = { aweme_id: noteId, version_code: '190500', version_name: '19.5.0', aid: '6383' };
-      const { res } = await dyFetch(ABogus.signUrl(API.detail, params, cfg.ua), { cookie });
+      const d1 = apiParams({ aweme_id: noteId }, cookie);
+      const { res } = await dyFetch(buildDouyinUrl(API.detail, d1.params, d1.uifid), { cookie });
       const body = await res.text();
       if (!body) return { videos: [], error: 'Detail API 返回空' };
       const ad = JSON.parse(body).aweme_detail;
@@ -1436,11 +1573,11 @@ const DouyinParser = (() => {
       let cursor = 0, hasMore = true, page = 0;
       while (hasMore && page < 50) {
         page++;
-        const mp = {
+        const m1 = apiParams({
           mix_id: mixId, cursor: String(cursor), count: '20',
-          version_code: '170400', version_name: '17.4.0', aid: '6383',
-        };
-        const r2 = await dyFetch(ABogus.signUrl(API.mix, mp, cfg.ua), { cookie });
+          version_code: '170400', version_name: '17.4.0',
+        }, cookie);
+        const r2 = await dyFetch(buildDouyinUrl(API.mix, m1.params, m1.uifid), { cookie });
         const b2 = await r2.res.text();
         const data = JSON.parse(b2);
         if (data.status_code !== 0) return { videos, error: `第${page}页失败: status=${data.status_code}` };
@@ -1503,9 +1640,10 @@ const DouyinParser = (() => {
         page++;
         const params = {
           aweme_id: awemeId, cursor: String(cursor), count: '20', item_type: '0',
-          version_code: '170400', version_name: '17.4.0', aid: '6383',
+          version_code: '170400', version_name: '17.4.0',
         };
-        const { res } = await dyFetch(ABogus.signUrl(API.comments, params, cfg.ua), { cookie });
+        const cp = apiParams(params, cookie);
+        const { res } = await dyFetch(buildDouyinUrl(API.comments, cp.params, cp.uifid), { cookie });
         const data = JSON.parse(await res.text());
         if (data.status_code !== 0) {
           if (all.length) break;
@@ -1532,9 +1670,10 @@ const DouyinParser = (() => {
         page++;
         const params = {
           item_id: awemeId, comment_id: commentId, cursor: String(cur), count: '10',
-          item_type: '0', version_code: '170400', version_name: '17.4.0', aid: '6383',
+          item_type: '0', version_code: '170400', version_name: '17.4.0',
         };
-        const { res } = await dyFetch(ABogus.signUrl(API.replies, params, cfg.ua), { cookie });
+        const rp = apiParams(params, cookie);
+        const { res } = await dyFetch(buildDouyinUrl(API.replies, rp.params, rp.uifid), { cookie });
         const data = JSON.parse(await res.text());
         if (data.status_code !== 0) {
           if (all.length) break;
@@ -2778,10 +2917,10 @@ function settingsHtml() {
   <button class="btn tiny" data-act="copy-edgefn-mod">复制 ES Module 版代码</button>
 
   <div class="divider"></div>
-  <div class="card-head"><h3>本地助手（用手机自己的网络请求抖音）</h3></div>
+  <div class="card-head"><h3>本地助手（可选 · 兜底方案）</h3></div>
   <div class="notice">
-    抖音对服务器/云节点出口做了风控拦截（返回 403），但对手机这种真实客户端是放行的。
-    在手机上跑一次本地助手，让请求由手机发出，实况图集的动态视频、评论区、合集就都能用了。
+    正常情况下不需要它：官方通道已经能通过抖音风控（已内置 a_bogus + x-secsdk-web-signature 双签名）。
+    只有当你的网络环境再次被抖音限制时，可以用这个兜底：让请求改由手机发出。
     <div class="spacer"></div>
     <b>手机（Termux）步骤：</b><br>
     1. 安装 Termux（F-Droid 版）；<br>
