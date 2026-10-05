@@ -2809,9 +2809,7 @@ function settingsHtml() {
   </div>
 
   <div class="notice">
-    本页面是纯静态单文件，放在 GitHub Pages 即可运行。<br>
-    <b>开箱可用</b>：第三方的解析接口在国内可直连，能解析并下载无水印视频 / 图集 / 封面 / 背景音乐。<br>
-    <b>完整功能</b>（评论、合集混剪、实况图集、登录 Cookie）走抖音官方接口，需要按下文加一条本站反代规则（浏览器不允许网页直接跨域调用抖音接口，也无法自行设置 Cookie）。
+    实况视频、评论、合集由服务器端自动完成签名与登录态处理，正常使用无需改动这里。
   </div>
 
   <div class="field">
@@ -2821,64 +2819,52 @@ function settingsHtml() {
     </select>
   </div>
 
-  <div class="field">
-    <label>本站反代前缀</label>
-    <div class="row">
-      <input class="input" data-input="cfgDy" id="cfgDy" value="${esc(cfg.dyPrefix)}" placeholder="/dyapi" style="flex:1;min-width:120px">
-      <input class="input" data-input="cfgIes" id="cfgIes" value="${esc(cfg.iesPrefix)}" placeholder="/dyapi-ies" style="flex:1;min-width:120px">
-      <input class="input" data-input="cfgV" id="cfgV" value="${esc(cfg.vPrefix)}" placeholder="/dyapi-v" style="flex:1;min-width:120px">
-    </div>
-    <div class="desc">依次对应 www.douyin.com / www.iesdouyin.com / v.douyin.com 三个回源前缀。</div>
-  </div>
-
-  <div class="field">
-    <label>Cookie / UA 透传方式</label>
-    <select class="input" id="cfgCookieMode" data-input="cfgCookieMode">
-      <option value="header" ${cfg.cookieMode === 'header' ? 'selected' : ''}>请求头 X-Dy-Cookie（推荐）</option>
-      <option value="query" ${cfg.cookieMode === 'query' ? 'selected' : ''}>查询参数 __dyck（部分环境更兼容）</option>
-    </select>
-    <div class="desc">浏览器不允许网页直接设置 Cookie 头，需要边缘规则把这里发出的值映射回 Cookie。</div>
-  </div>
-
-  <div class="field">
-    <label>自定义代理模板</label>
-    <input class="input" id="cfgCustom" data-input="cfgCustom" value="${esc(cfg.customTpl)}"
-      placeholder="https://your-proxy.example.com/?url={url}">
-    <div class="desc">使用 <code>{url}</code> 占位符；不写占位符则直接把目标地址拼在后面。</div>
-  </div>
-
-  <div class="field">
-    <label>自动模式下启用的公共代理（按顺序尝试）</label>
-    <div class="row">
-      ${PUBLIC_PROXIES.map((p) => `
-        <label class="switch"><input type="checkbox" class="cfgProxy" value="${p.id}"
-          ${cfg.proxies.includes(p.id) ? 'checked' : ''}><span class="track"></span>${esc(p.name)}</label>`).join('')}
-    </div>
-    <div class="desc">公共代理无法自定义请求头（会触发浏览器预检），因此只能用于公开作品的解析与下载。</div>
-  </div>
-
-  <div class="field">
-    <label>第三方解析接口（兜底通道，按顺序尝试）</label>
-    <div class="row">
-      ${PARSE_APIS.map((p) => `
-        <label class="switch"><input type="checkbox" class="cfgParseApi" value="${p.id}"
-          ${cfg.parseApis.includes(p.id) ? 'checked' : ''}><span class="track"></span>${esc(p.name)}</label>`).join('')}
-    </div>
-    <div class="desc">
-      没有自建反代时的首选：国内网络可直连、自带跨域，能解析无水印视频 / 图集 / 封面 / 背景音乐。
-      手机实测：直连抖音接口会被浏览器跨域拦截，公共代理在境内基本不可用，只有这类接口可用。
-    </div>
-  </div>
-
-  <div class="field">
-    <label>请求超时（毫秒）</label>
-    <input class="input" id="cfgTimeout" data-input="cfgTimeout" value="${esc(cfg.timeout)}">
-  </div>
-
   <details>
-    <summary class="hint" style="cursor:pointer">高级：请求 User-Agent（需与 A-Bogus 签名一致）</summary>
-    <div class="field" style="margin-top:8px">
-      <input class="input" id="cfgUa" data-input="cfgUa" value="${esc(cfg.ua)}">
+    <summary class="hint" style="cursor:pointer">高级设置（一般不用动）</summary>
+    <div style="margin-top:10px">
+      <div class="field">
+        <label>本站反代前缀</label>
+        <div class="row">
+          <input class="input" data-input="cfgDy" id="cfgDy" value="${esc(cfg.dyPrefix)}" placeholder="/dyapi" style="flex:1;min-width:110px">
+          <input class="input" data-input="cfgIes" id="cfgIes" value="${esc(cfg.iesPrefix)}" placeholder="/dyapi-ies" style="flex:1;min-width:110px">
+          <input class="input" data-input="cfgV" id="cfgV" value="${esc(cfg.vPrefix)}" placeholder="/dyapi-v" style="flex:1;min-width:110px">
+        </div>
+      </div>
+      <div class="field">
+        <label>Cookie / UA 透传方式</label>
+        <select class="input" id="cfgCookieMode" data-input="cfgCookieMode">
+          <option value="header" ${cfg.cookieMode === 'header' ? 'selected' : ''}>请求头 X-Dy-Cookie（推荐）</option>
+          <option value="query" ${cfg.cookieMode === 'query' ? 'selected' : ''}>查询参数 __dyck</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>自定义代理模板</label>
+        <input class="input" id="cfgCustom" data-input="cfgCustom" value="${esc(cfg.customTpl)}" placeholder="https://your-proxy.example.com/?url={url}">
+      </div>
+      <div class="field">
+        <label>请求超时（毫秒）</label>
+        <input class="input" id="cfgTimeout" data-input="cfgTimeout" value="${esc(cfg.timeout)}">
+      </div>
+      <div class="field">
+        <label>请求 User-Agent</label>
+        <input class="input" id="cfgUa" data-input="cfgUa" value="${esc(cfg.ua)}">
+      </div>
+      <div class="field">
+        <label>公共代理</label>
+        <div class="row">
+          ${PUBLIC_PROXIES.map((p) => `
+            <label class="switch"><input type="checkbox" class="cfgProxy" value="${p.id}"
+              ${cfg.proxies.includes(p.id) ? 'checked' : ''}><span class="track"></span>${esc(p.name)}</label>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>第三方解析接口</label>
+        <div class="row">
+          ${PARSE_APIS.map((p) => `
+            <label class="switch"><input type="checkbox" class="cfgParseApi" value="${p.id}"
+              ${cfg.parseApis.includes(p.id) ? 'checked' : ''}><span class="track"></span>${esc(p.name)}</label>`).join('')}
+        </div>
+      </div>
     </div>
   </details>
 
@@ -2888,72 +2874,15 @@ function settingsHtml() {
     <button class="btn danger" data-act="cfg-reset">清空本地数据</button>
   </div>
 
-  <div class="divider"></div>
-  <label class="hint">通道自检结果</label>
-  <pre id="testResult">点击「通道自检」开始检测（会向抖音分享页发一次请求）</pre>
+  <pre id="testResult" style="display:none"></pre>
 
-  <div class="divider"></div>
-  <div class="card-head"><h3>部署 / 域名访问说明</h3></div>
-  <div class="notice">
-    <b>1. 放到 GitHub</b><br>
-    新建仓库 → 把本文件命名为 <code>index.html</code> 上传 → Settings → Pages → Source 选 main / root → 得到
-    <code>https://用户名.github.io/仓库名/</code>。<br><br>
-    <b>2. 用腾讯云加速域名</b><br>
-    在 EdgeOne 站点里添加加速域名，源站填 GitHub Pages 地址，即可用自有域名访问。<br><br>
-    <b>3. （可选，强烈建议）加一条回源规则</b><br>
-    纯静态直连抖音接口会被浏览器跨域策略拦截（手机实测：直连被拦、公共代理在境内基本超时），
-    所以「评论 / 合集混剪 / 实况图集 / 登录 Cookie」需要一条同源反代规则；配好后本页会自动启用该通道。
-    不配置也能用第三方解析接口完成视频 / 图集 / 封面 / 背景音乐的解析与下载。
-  </div>
-  <pre id="edgeRule">${esc(EDGE_RULE_TEXT)}</pre>
-  <button class="btn tiny" data-act="copy-rule">复制规则说明</button>
+  <details style="margin-top:12px">
+    <summary class="hint" style="cursor:pointer">运行日志</summary>
+    <pre id="logBox">${esc(logs.join('\n'))}</pre>
+    <button class="btn tiny ghost" data-act="copy-logs">复制日志</button>
+  </details>
 
-  <div class="divider"></div>
-  <div class="card-head"><h3>一键开启完整功能（EdgeOne 边缘函数）</h3></div>
-  <div class="notice">
-    <b>方式一（推荐，无需操作）：</b>本仓库里已经放好了 <code>edge-functions/dyapi</code>、
-    <code>edge-functions/dyapi-ies</code>、<code>edge-functions/dyapi-v</code> 三个边缘函数，
-    Makers 项目每次从 main 分支构建时会自动部署它们，部署完成刷新本页即可。<br>
-    <b>方式二（手动）：</b>在控制台新建边缘函数，把下面代码粘贴进去。<br>
-    两种方式任一完成后，右上角通道会自动变成「本站反代」，然后：<br>
-    · 实况图集里的动态视频可以下载（和 App 一样）<br>
-    · 合集混剪、独立视频列表、评论区、登录 Cookie 全部可用
-  </div>
-  <pre id="edgeFn">${esc(EDGE_FN_TEXT)}</pre>
-  <button class="btn tiny" data-act="copy-edgefn">复制边缘函数代码</button>
-  <div class="desc" style="margin-top:8px">
-    如果控制台给你的模板是 <code>export default</code> 写法（不是 addEventListener），
-    就用下面这份：
-  </div>
-  <pre>${esc(EDGE_FN_TEXT_MOD)}</pre>
-  <button class="btn tiny" data-act="copy-edgefn-mod">复制 ES Module 版代码</button>
-
-  <div class="divider"></div>
-  <div class="card-head"><h3>本地助手（可选 · 兜底方案）</h3></div>
-  <div class="notice">
-    正常情况下不需要它：官方通道已经能通过抖音风控（已内置 a_bogus + x-secsdk-web-signature 双签名）。
-    只有当你的网络环境再次被抖音限制时，可以用这个兜底：让请求改由手机发出。
-    <div class="spacer"></div>
-    <b>手机（Termux）步骤：</b><br>
-    1. 安装 Termux（F-Droid 版）；<br>
-    2. 执行 <code>pkg install python curl</code>；<br>
-    3. 下载并运行助手：<br>
-    <code>curl -O ${esc(location.origin + '/helper/phone-helper.py')} && python phone-helper.py</code><br>
-    4. 刷新本页，右上角通道会变成「<b>本地助手</b>」。
-    <div class="spacer"></div>
-    <span class="hint">助手只监听 127.0.0.1:8787，外部无法访问；Cookie 只在你的设备和本机进程之间传递。</span>
-  </div>
-  <a class="btn tiny" href="/helper/phone-helper.py" download>下载助手脚本</a>
-
-  <div class="divider"></div>
-  <div class="card-head"><h3>运行日志</h3><button class="btn tiny ghost" data-act="copy-logs">复制日志</button></div>
-  <pre id="logBox">${esc(logs.join('\n'))}</pre>
-
-  <div class="divider"></div>
-  <div class="notice">
-    本工具仅用于个人学习与备份自己有权保存的内容，请勿用于商业用途或侵犯他人权益。
-    Cookie 仅保存在你自己的浏览器 localStorage 中，不会上传到任何服务器。
-  </div>`;
+  <div class="hint" style="margin-top:12px">仅用于备份自己有权保存的内容，请勿用于商业用途。</div>`;
 }
 
 function openSettings() {
@@ -2985,6 +2914,7 @@ function collectSettings() {
 async function runChannelTest() {
   const box = $('testResult');
   if (!box) return;
+  box.style.display = 'block';
   const target = 'https://www.iesdouyin.com/share/video/7638421965833954419';
   box.textContent = '检测中…';
   const lines = [];
