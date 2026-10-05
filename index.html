@@ -621,6 +621,10 @@ function effectiveCookie() {
 
 let edgeOk = null; // null=未探测，true/false=探测结果
 let edgeProbePromise = null; // 探测中的 Promise（解析前先等它，避免误判通道）
+/** 本地助手（手机/电脑上跑的小代理，用设备自身的网络+客户端指纹访问抖音） */
+const HELPER_BASE = 'http://127.0.0.1:8787';
+let helperOk = null;
+let helperProbePromise = null;
 let lastChannelUsed = '';
 /** 通道健康状态：失败后短时间内不再重试，避免每次都白等超时 */
 const DEAD_TTL = 5 * 60 * 1000;
@@ -677,6 +681,22 @@ function buildChannelRequest(channel, target, opts) {
     return { url, headers, proxy: true };
   }
 
+  if (channel === 'helper') {
+    // 本地助手：与本机（手机/电脑）上的小代理同源，由它用设备自己的网络与客户端指纹请求抖音
+    let u;
+    try { u = new URL(target, location.href); } catch (_) { return null; }
+    if (u.protocol !== 'https:') return null;
+    const base = HELPER_BASE + u.pathname + u.search;
+    const h = Object.assign({}, headers, { 'X-Dy-Cookie': cookie || '' });
+    if (cfg.ua) h['X-Dy-Ua'] = cfg.ua;
+    h['X-Dy-Referer'] = 'https://www.douyin.com/';
+    if (cookie) {
+      const uifid = /(?:^|;\s*)UIFID=([^;]+)/.exec(cookie);
+      if (uifid) h['X-Dy-Uifid'] = uifid[1].trim();
+    }
+    return { url: base, headers: h, proxy: true };
+  }
+
   if (channel === 'custom') {
     const tpl = (cfg.customTpl || '').trim();
     if (!tpl) return null;
@@ -704,13 +724,14 @@ function channelOrder(target, opts) {
   if (cfg.channel && cfg.channel !== 'auto' && cfg.channel !== 'parseapi') return [cfg.channel];
   const host = hostOf(target);
   const order = [];
+  if (helperOk === true) order.push('helper');       // 本地助手优先（用设备自身网络，最容易通过风控）
   if (cfg.prefChannel && !isDead(cfg.prefChannel, host)) order.push(cfg.prefChannel);
   if (edgeOk !== false && edgePrefixFor(host)) order.push('edge');
   if (opts.allowDirect !== false) order.push('direct');
   if (edgeOk !== false && !edgePrefixFor(host)) order.push('edge');
   if (cfg.customTpl) order.push('custom');
   // 已经有自建反代时不再尝试公共代理（境内基本不通，只会白等超时）
-  const hasSelfProxy = edgeOk === true || !!cfg.customTpl;
+  const hasSelfProxy = helperOk === true || edgeOk === true || !!cfg.customTpl;
   if (!hasSelfProxy) {
     for (const id of cfg.proxies) if (PUBLIC_PROXIES.some((p) => p.id === id)) order.push(id);
   }
@@ -804,12 +825,26 @@ async function probeEdge() {
   return edgeOk;
 }
 
+/** 探测本机「本地助手」是否在运行（手机/电脑上跑的小代理，用设备自身网络访问抖音） */
+async function probeHelper() {
+  try {
+    const res = await fetchWithTimeout(HELPER_BASE + '/health', { method: 'GET', cache: 'no-store' }, 3000);
+    helperOk = res.ok;
+  } catch (_) {
+    helperOk = false;
+  }
+  updateChannelChip();
+  return helperOk;
+}
+
 function updateChannelChip() {
   const chip = $('channelChip'), txt = $('channelChipText');
   if (!chip || !txt) return;
   chip.classList.remove('ok', 'warn', 'err');
   let label = '';
-  if (cfg.channel !== 'auto') {
+  if (helperOk === true) {
+    label = '通道：本地助手'; chip.classList.add('ok');
+  } else if (cfg.channel !== 'auto') {
     const names = { edge: '本站反代', direct: '直连', custom: '自定义代理' };
     label = '通道：' + (names[cfg.channel] || cfg.channel);
     chip.classList.add(edgeOk === false && cfg.channel === 'edge' ? 'err' : 'warn');
@@ -1303,6 +1338,9 @@ const DouyinParser = (() => {
     // 等一次通道探测（最多 3 秒），否则会把「本站反代」误判成不可用
     if (edgeOk === null && edgeProbePromise) {
       await Promise.race([edgeProbePromise.catch(() => {}), sleep(3000)]);
+    }
+    if (helperOk === null && helperProbePromise) {
+      await Promise.race([helperProbePromise.catch(() => {}), sleep(3000)]);
     }
     argusBlocked = false;
     /** 记住成功结果，供重复解析复用 */
@@ -2740,6 +2778,23 @@ function settingsHtml() {
   <button class="btn tiny" data-act="copy-edgefn-mod">复制 ES Module 版代码</button>
 
   <div class="divider"></div>
+  <div class="card-head"><h3>本地助手（用手机自己的网络请求抖音）</h3></div>
+  <div class="notice">
+    抖音对服务器/云节点出口做了风控拦截（返回 403），但对手机这种真实客户端是放行的。
+    在手机上跑一次本地助手，让请求由手机发出，实况图集的动态视频、评论区、合集就都能用了。
+    <div class="spacer"></div>
+    <b>手机（Termux）步骤：</b><br>
+    1. 安装 Termux（F-Droid 版）；<br>
+    2. 执行 <code>pkg install python curl</code>；<br>
+    3. 下载并运行助手：<br>
+    <code>curl -O ${esc(location.origin + '/helper/phone-helper.py')} && python phone-helper.py</code><br>
+    4. 刷新本页，右上角通道会变成「<b>本地助手</b>」。
+    <div class="spacer"></div>
+    <span class="hint">助手只监听 127.0.0.1:8787，外部无法访问；Cookie 只在你的设备和本机进程之间传递。</span>
+  </div>
+  <a class="btn tiny" href="/helper/phone-helper.py" download>下载助手脚本</a>
+
+  <div class="divider"></div>
   <div class="card-head"><h3>运行日志</h3><button class="btn tiny ghost" data-act="copy-logs">复制日志</button></div>
   <pre id="logBox">${esc(logs.join('\n'))}</pre>
 
@@ -3072,6 +3127,10 @@ window.addEventListener('scroll', () => {
   logLine('页面已加载，通道=' + cfg.channel);
   edgeProbePromise = probeEdge().then((ok) => {
     if (!ok) logLine('未检测到本站反代（/dyapi），将使用直连 + 公共代理');
+    return ok;
+  });
+  helperProbePromise = probeHelper().then((ok) => {
+    if (ok) logLine('✓ 检测到本地助手（127.0.0.1:8787），采用设备自身网络请求抖音');
     return ok;
   });
   refreshIdentity();
