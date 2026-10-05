@@ -40,7 +40,24 @@ export default async function onRequest(context) {
     }
     return raw;
   };
-  const envCookie = decode(env.DY_COOKIE_B64 || env.DY_COOKIE || '');
+  const envCookie = (() => {
+    if (env.DY_COOKIE_B64) return decode(env.DY_COOKIE_B64);
+    const chunks = [];
+    for (let i = 1; i <= 12; i++) {
+      const v = env['DY_COOKIE_B64_' + i];
+      if (!v) break;
+      chunks.push(String(v).trim());
+    }
+    if (chunks.length) return decode(chunks.join(''));
+    if (env.DY_COOKIE) return decode(env.DY_COOKIE);
+    const plain = [];
+    for (let i = 1; i <= 12; i++) {
+      const v = env['DY_COOKIE_' + i];
+      if (!v) break;
+      plain.push(String(v).trim());
+    }
+    return plain.join('');
+  })();
   const cookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || envCookie;
   if (cookie) headers.set('Cookie', cookie);
 
