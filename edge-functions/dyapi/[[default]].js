@@ -366,6 +366,34 @@ export default async function onRequest(context) {
   }
 
   let target;
+
+  // 通用取流：/dyapi/__proxy__?u=<目标地址>——用于下载视频/图片（只允许抖音系域名）
+  if (pathname === '/__proxy__') {
+    const raw = url.searchParams.get('u') || '';
+    let t;
+    try { t = new URL(raw); } catch (_) { return new Response('bad url', { status: 400 }); }
+    if (t.protocol !== 'https:') return new Response('https only', { status: 400 });
+    const host = t.hostname;
+    const allowed = /(^|\.)(douyin\.com|douyinpic\.com|douyinvod\.com|douyinstatic\.com|bytednsdoc\.com|byteimg\.com|pstatp\.com|snssdk\.com|amemv\.com)$/i.test(host);
+    if (!allowed) return new Response('domain not allowed', { status: 403 });
+    try {
+      const r = await fetch(t.href, {
+        headers: { 'User-Agent': UA, Accept: '*/*' },   // 不带 Referer/Cookie，CDN 不需要
+        redirect: 'follow',
+      });
+      const out = new Headers();
+      out.set('content-type', r.headers.get('content-type') || 'application/octet-stream');
+      out.set('Access-Control-Allow-Origin', '*');
+      out.set('Cache-Control', 'no-store');
+      out.set('X-Final-Url', r.url);
+      return new Response(r.body, { status: r.status, headers: out });
+    } catch (e) {
+      return new Response('proxy error: ' + ((e && e.message) || e), {
+        status: 502, headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+    }
+  }
+
   try {
     target = base + buildSignedPath(pathname, url.searchParams, uifid, userAgent);
   } catch (e) {
