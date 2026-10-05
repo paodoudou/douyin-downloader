@@ -283,6 +283,33 @@ function cookieUifid(cookie) {
   return m ? m[1].trim() : '';
 }
 
+/* 环境变量里的 Cookie 可以是「明文」，也可以是 URL-safe base64（避免输入框拒绝空格/分号） */
+const B64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function b64decode(input) {
+  let str = String(input).replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  let out = '', buffer = 0, bits = 0;
+  for (const ch of str) {
+    if (ch === '=') break;
+    const v = B64_CHARS.indexOf(ch);
+    if (v < 0) continue;
+    buffer = (buffer << 6) | v;
+    bits += 6;
+    if (bits >= 8) { bits -= 8; out += String.fromCharCode((buffer >> bits) & 0xFF); }
+  }
+  return out;
+}
+function decodeEnvCookie(raw) {
+  if (!raw) return '';
+  if (/^[A-Za-z0-9\-_]+$/.test(raw) && raw.length > 40) {
+    try {
+      const text = b64decode(raw);
+      if (text.includes('=')) return text;
+    } catch (_) {}
+  }
+  return raw;
+}
+
 export default async function onRequest(context) {
   const request = context.request;
   const url = new URL(request.url);
@@ -290,7 +317,7 @@ export default async function onRequest(context) {
     return new Response('not found', { status: 404 });
   }
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
-  const envCookie = env.DY_COOKIE || '';
+  const envCookie = decodeEnvCookie(env.DY_COOKIE_B64 || env.DY_COOKIE || '');
   // 访客自己填的 Cookie 优先；没填就用环境变量里的默认 Cookie（默认值不写入代码、不下发浏览器）
   const rawCookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || envCookie;
   const cookie = trimCookie(rawCookie);
