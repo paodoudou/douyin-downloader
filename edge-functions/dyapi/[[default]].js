@@ -291,7 +291,8 @@ export default async function onRequest(context) {
   }
   const env = (context && context.env) || (typeof process !== 'undefined' && process.env) || {};
   const envCookie = env.DY_COOKIE || '';
-  const rawCookie = envCookie || request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || '';
+  // 访客自己填的 Cookie 优先；没填就用环境变量里的默认 Cookie（默认值不写入代码、不下发浏览器）
+  const rawCookie = request.headers.get('x-dy-cookie') || url.searchParams.get('__dyck') || envCookie;
   const cookie = trimCookie(rawCookie);
   const uifid = request.headers.get('x-dy-uifid') || cookieUifid(rawCookie);
   const userAgent = (request.headers.get('x-dy-ua') || UA).slice(0, 400);
